@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#c1683d">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<title>Taller de Canto y Salud Mental</title>
+<style>
+  :root{
+    --bg:#f8f1e6;
+    --card:#fffaf2;
+    --text:#3d2f26;
+    --text-dim:#8c7a6b;
+    --primary:#c1683d;
+    --primary-dark:#9c522e;
+    --danger:#b3453a;
+    --danger-bg:#f8e1da;
+    --ok:#6f8f51;
+    --ok-bg:#e8f0dc;
+    --warn:#c2872b;
+    --warn-bg:#faead0;
+    --border:#e9dcc7;
+    --radius:18px;
+    --font-agenda:Georgia,'Iowan Old Style','Palatino Linotype',serif;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    --input-bg:#fdf9f2;
+    --btn-secondary-bg:#f1e6d5;
+    --soft-tint-bg:#fbeee1;
+    --overlay-bg:rgba(50,30,15,.45);
+
+    /* tokens que cambian según la paleta elegida (ver PALETAS en JS) */
+    --card-grad-a:#fff2df;
+    --card-grad-b:#ffe3c4;
+    --accent-text:#7a3d1c;
+    --blob-1:#f2ddba;
+    --blob-2:#f6e7cf;
+    --blob-opacity:1;
+  }
+
+  :root[data-theme="dark"]{
+    --bg:#201914;
+    --card:#2c231d;
+    --text:#f1e8dd;
+    --text-dim:#b3a191;
+    --danger-bg:#4a2620;
+    --ok-bg:#25321f;
+    --warn-bg:#3d2f14;
+    --border:#463a2f;
+    --input-bg:#241d18;
+    --btn-secondary-bg:#3a3128;
+    --soft-tint-bg:#3a2a20;
+    --overlay-bg:rgba(0,0,0,.6);
+    --blob-opacity:.18;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding-bottom:calc(72px + var(--safe-bottom));
+    min-height:100vh;
+  }
+  header.topbar{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+    color:#fff;
+    padding:16px 18px;
+    display:flex;align-items:center;justify-content:space-between;
+    box-shadow:0 3px 12px rgba(120,70,30,.22);
+  }
+  header.topbar h1{font-family:var(--font-agenda);font-size:20px;margin:0;font-weight:700;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  header.topbar .icon-btn{
+    background:rgba(255,255,255,.18);
+    border:none;color:#fff;
+    width:38px;height:38px;border-radius:12px;
+    font-size:18px;display:flex;align-items:center;justify-content:center;
+  }
+  main{padding:14px;max-width:640px;margin:0 auto;}
+  section.view{display:none;}
+  section.view.active{display:block;animation:fadein .15s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:12px;
+    box-shadow:0 3px 14px rgba(120,80,40,.08);
+    border:1px solid var(--border);
+  }
+  .card h2{margin:0 0 10px;font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;font-weight:700;}
+  .card h2 .count{
+    background:var(--primary);color:#fff;border-radius:20px;
+    padding:1px 9px;font-size:12px;margin-left:6px;
+  }
+  .empty-msg{color:var(--text-dim);font-size:14px;padding:8px 2px;}
+
+  .next-class-card{
+    background:linear-gradient(135deg,var(--card-grad-a),var(--card-grad-b));
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:16px 18px;
+    margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(160,100,40,.14);
+  }
+  .next-class-eyebrow{font-size:12px;font-weight:700;color:var(--primary-dark);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
+  .next-class-countdown{font-family:var(--font-agenda);font-size:26px;font-weight:700;color:var(--accent-text);margin-bottom:6px;}
+  .next-class-info{font-size:14px;color:var(--accent-text);display:flex;align-items:center;gap:6px;}
+  .next-class-info .dot{width:10px;height:10px;}
+
+  .stats-esperado{
+    background:var(--soft-tint-bg);border:1px dashed var(--border);border-radius:14px;
+    padding:10px 14px;font-size:13px;color:var(--text-dim);margin-bottom:12px;
+  }
+  .stats-esperado b{color:var(--text);}
+
+  .stat-row{display:flex;gap:10px;margin-bottom:12px;}
+  .stat-box{
+    flex:1;background:var(--card);border-radius:var(--radius);
+    padding:14px 10px;text-align:center;border:1px solid var(--border);
+  }
+  .stat-box .num{font-size:22px;font-weight:800;}
+  .stat-box .label{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .stat-box.warn .num{color:var(--warn);}
+  .stat-box.ok .num{color:var(--ok);}
+
+  .list-item{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 4px;border-bottom:1px solid var(--border);
+  }
+  .list-item:last-child{border-bottom:none;}
+  .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+  .item-main{flex:1;min-width:0;}
+  .item-title{font-weight:600;font-size:15px;}
+  .item-sub{font-size:13px;color:var(--text-dim);margin-top:1px;}
+  .item-right{text-align:right;font-size:14px;font-weight:700;white-space:nowrap;}
+
+  .badge{
+    display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;
+  }
+  .badge.pendiente{background:var(--warn-bg);color:var(--warn);}
+  .badge.pagada{background:var(--ok-bg);color:var(--ok);}
+
+  nav.bottomnav{
+    position:fixed;bottom:0;left:0;right:0;z-index:20;
+    background:var(--card);border-top:1px solid var(--border);
+    display:flex;
+    padding-bottom:var(--safe-bottom);
+    box-shadow:0 -2px 12px rgba(120,80,40,.08);
+  }
+  nav.bottomnav button{
+    flex:1;background:none;border:none;
+    padding:9px 2px 8px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    color:var(--text-dim);font-size:11px;font-weight:600;
+  }
+  nav.bottomnav button .ic{font-size:20px;}
+  nav.bottomnav button.active{color:var(--primary);}
+
+  .fab{
+    position:fixed;right:18px;bottom:calc(84px + var(--safe-bottom));z-index:15;
+    width:58px;height:58px;border-radius:50%;
+    background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;
+    font-size:28px;box-shadow:0 4px 14px rgba(160,90,40,.4);
+    display:flex;align-items:center;justify-content:center;
+    line-height:0;
+  }
+  .fab:active{background:var(--primary-dark);}
+
+  .filter-row{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;}
+  .filter-chip{
+    flex-shrink:0;padding:8px 14px;border-radius:20px;border:1px solid var(--border);
+    background:var(--card);font-size:13px;font-weight:600;color:var(--text-dim);white-space:nowrap;
+  }
+  .filter-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+  /* bottom sheet modal */
+  .overlay{
+    position:fixed;inset:0;background:var(--overlay-bg);z-index:50;
+    display:none;align-items:flex-end;justify-content:center;
+  }
+  .overlay.show{display:flex;}
+  .sheet{
+    background:var(--card);width:100%;max-width:640px;
+    border-radius:22px 22px 0 0;
+    padding:16px 16px calc(20px + var(--safe-bottom));
+    max-height:88vh;overflow-y:auto;
+    animation:slideup .18s ease;
+  }
+  @keyframes slideup{from{transform:translateY(30px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+  .sheet-handle{width:40px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 12px;}
+  .sheet h3{font-family:var(--font-agenda);margin:0 0 14px;font-size:19px;color:var(--primary-dark);}
+
+  label{display:block;font-size:13px;font-weight:600;color:var(--text-dim);margin:12px 0 5px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
+    width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;
+    font-size:15px;background:var(--input-bg);color:var(--text);font-family:inherit;
+  }
+  textarea{resize:vertical;min-height:60px;}
+  input[type=color]{width:44px;height:36px;border:1px solid var(--border);border-radius:8px;padding:2px;background:var(--card);}
+
+  .swatches{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .swatch{width:30px;height:30px;border-radius:50%;border:2px solid transparent;}
+  .swatch.sel{border-color:var(--text);}
+
+  .row2{display:flex;gap:10px;}
+  .row2 > *{flex:1;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:12px 16px;border-radius:14px;border:none;font-size:15px;font-weight:700;
+    width:100%;margin-top:16px;
+  }
+  .btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;}
+  .btn.primary:active{background:var(--primary-dark);}
+  .btn.secondary{background:var(--btn-secondary-bg);color:var(--text);}
+  .btn.danger{background:var(--danger-bg);color:var(--danger);}
+  .btn-row{display:flex;gap:10px;}
+  .btn-row .btn{margin-top:16px;}
+
+  .checkbox-line{display:flex;align-items:center;gap:10px;padding:10px 0;}
+  .checkbox-line input[type=checkbox]{width:22px;height:22px;flex-shrink:0;}
+  .checkbox-line span{font-size:15px;}
+  .checkbox-line.done span{text-decoration:line-through;color:var(--text-dim);}
+  .checkbox-line.done .item-title{text-decoration:line-through;color:var(--text-dim);}
+  .checkbox-line .item-main{cursor:pointer;}
+
+  .toggle-pill{
+    border:none;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;flex-shrink:0;
+  }
+  .toggle-pill.pendiente{background:var(--warn-bg);color:var(--warn);}
+  .toggle-pill.pagada{background:var(--ok-bg);color:var(--ok);}
+
+  .toast{
+    position:fixed;left:50%;bottom:calc(90px + var(--safe-bottom));transform:translateX(-50%);
+    background:#3d2f26;color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;
+    z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;
+  }
+  .toast.show{opacity:1;}
+
+  .section-actions{display:flex;gap:8px;margin-bottom:12px;}
+  .section-actions .btn{margin-top:0;flex:1;padding:10px;font-size:13px;}
+
+  .btn.whatsapp{background:#25D366;color:#fff;}
+  .btn.whatsapp:active{background:#1ea952;}
+
+  .stats-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .stats-nav button{background:var(--btn-secondary-bg);border:none;border-radius:10px;width:40px;height:40px;font-size:18px;font-weight:700;color:var(--text);}
+  .stats-nav .stats-label{font-family:var(--font-agenda);font-weight:700;font-size:16px;text-transform:capitalize;color:var(--primary-dark);}
+
+  .tipo-option{
+    flex:1;display:flex;align-items:flex-start;gap:8px;
+    background:var(--input-bg);border:1px solid var(--border);border-radius:10px;
+    padding:10px;font-size:13px;font-weight:600;
+  }
+  .tipo-option input{margin-top:2px;width:18px;height:18px;flex-shrink:0;}
+  .tipo-option small{font-weight:400;color:var(--text-dim);}
+  .tipo-option.sel{border-color:var(--primary);background:var(--soft-tint-bg);}
+
+  .dias-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .dia-chip{
+    padding:8px 10px;border-radius:20px;border:1px solid var(--border);
+    background:var(--card);font-size:12px;font-weight:700;color:var(--text-dim);
+  }
+  .dia-chip input{display:none;}
+  .dia-chip.sel{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+  .calendar-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .calendar-nav button{background:var(--btn-secondary-bg);border:none;border-radius:10px;width:38px;height:38px;font-size:17px;font-weight:700;color:var(--text);}
+  .calendar-label{font-family:var(--font-agenda);font-weight:700;font-size:16px;color:var(--primary-dark);text-transform:capitalize;}
+
+  .calendar-weekdays{
+    display:grid;grid-template-columns:repeat(7,1fr);text-align:center;
+    font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:6px;
+  }
+
+  .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-cell{
+    appearance:none;-webkit-appearance:none;margin:0;cursor:pointer;font-family:inherit;
+    aspect-ratio:1;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-size:13px;font-weight:600;color:var(--text);padding:2px;
+  }
+  .cal-cell.empty{background:transparent;border:none;cursor:default;}
+  .cal-cell.today{
+    border:2px solid var(--primary);
+    background:var(--card-grad-a);
+    background:color-mix(in srgb, var(--primary) 16%, var(--card));
+  }
+  .cal-cell.has-turno{background:var(--card);}
+  .cal-cell.cancelada{opacity:.4;}
+  .cal-dots{display:flex;gap:2px;min-height:6px;}
+  .cal-dot{width:5px;height:5px;border-radius:50%;}
+
+  .day-detail-list{max-height:60vh;overflow-y:auto;margin-bottom:6px;}
+  .turno-block{border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px;}
+  .turno-block:last-child{border-bottom:none;}
+  .turno-block-head{font-family:var(--font-agenda);font-weight:700;font-size:15px;color:var(--primary-dark);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+
+  body::before{
+    content:'';position:fixed;top:-90px;right:-70px;width:240px;height:240px;
+    background:radial-gradient(circle at 30% 30%, var(--blob-1), transparent 70%);
+    border-radius:50%;z-index:-1;pointer-events:none;opacity:var(--blob-opacity);
+  }
+  body::after{
+    content:'';position:fixed;bottom:-110px;left:-90px;width:280px;height:280px;
+    background:radial-gradient(circle at 60% 60%, var(--blob-2), transparent 70%);
+    border-radius:50%;z-index:-1;pointer-events:none;opacity:var(--blob-opacity);
+  }
+
+  .paleta-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+  .paleta-swatch{
+    width:42px;height:42px;border-radius:50%;border:3px solid transparent;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;
+  }
+  .paleta-swatch.sel{border-color:var(--text);}
+
+  .ajustes-desc{color:var(--text-dim);font-size:13px;margin:0 0 10px;}
+
+  .tutorial-overlay{
+    position:fixed;inset:0;background:var(--overlay-bg);z-index:100;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .tutorial-overlay.show{display:flex;}
+  .tutorial-card{
+    background:var(--card);border-radius:22px;padding:30px 22px 22px;
+    max-width:380px;width:100%;text-align:center;position:relative;
+    box-shadow:0 10px 40px rgba(0,0,0,.25);animation:slideup .18s ease;
+  }
+  .tutorial-skip{
+    position:absolute;top:14px;right:14px;background:none;border:none;
+    color:var(--text-dim);font-size:13px;font-weight:600;padding:6px 8px;
+  }
+  .tutorial-icon{font-size:52px;margin-bottom:10px;line-height:1;}
+  .tutorial-title{font-family:var(--font-agenda);font-size:20px;color:var(--primary-dark);margin:0 0 10px;}
+  .tutorial-desc{font-size:14px;color:var(--text);line-height:1.55;margin:0 0 20px;}
+  .tutorial-dots{display:flex;gap:6px;justify-content:center;margin-bottom:20px;}
+  .tutorial-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:width .15s;}
+  .tutorial-dot.active{background:var(--primary);width:18px;border-radius:4px;}
+  .tutorial-nav{display:flex;gap:10px;}
+  .tutorial-nav .btn{margin-top:0;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+    <button class="icon-btn" id="backBtn" onclick="goTo('alumnos')" style="display:none;" aria-label="Volver">←</button>
+    <h1 id="pageTitle">🎤 Taller Canto y SM</h1>
+  </div>
+</header>
+
+<main>
+
+  <!-- DASHBOARD -->
+  <section class="view active" id="view-dashboard">
+    <div class="next-class-card" id="nextClassCard" hidden>
+      <div class="next-class-eyebrow">⏳ Tu próximo turno</div>
+      <div class="next-class-countdown" id="nextClassCountdown">—</div>
+      <div class="next-class-info">
+        <span class="dot" id="nextClassDot"></span>
+        <span id="nextClassInfo"></span>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-box warn">
+        <div class="num" id="statPendienteMonto">$0</div>
+        <div class="label">Cuotas pendientes</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="statAlumnos">0</div>
+        <div class="label">Alumnos</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="statPreparar">0</div>
+        <div class="label">Para preparar</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Próximos turnos</h2>
+      <div id="dashProximos"></div>
+    </div>
+
+    <div class="card">
+      <h2>Alumnos con cuota pendiente</h2>
+      <div id="dashPendientes"></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Para preparar</h2>
+      <div id="dashNotas"></div>
+      <div class="row2" style="margin-top:10px;">
+        <input type="text" id="f_notaNueva" placeholder="Ej: llevar backing tracks">
+        <button type="button" class="btn secondary" style="margin-top:0;" onclick="agregarNotaGeneral()">+ Agregar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ALUMNOS -->
+  <section class="view" id="view-alumnos">
+    <div id="listaAlumnos"></div>
+  </section>
+
+  <!-- TURNOS -->
+  <section class="view" id="view-turnos">
+    <div class="filter-row" id="filtroTurnoCalendario"></div>
+
+    <div class="card">
+      <div class="calendar-nav">
+        <button onclick="cambiarMesCalendario(-1)" aria-label="Mes anterior">←</button>
+        <div class="calendar-label" id="calendarioMesLabel"></div>
+        <button onclick="cambiarMesCalendario(1)" aria-label="Mes siguiente">→</button>
+      </div>
+      <div class="calendar-weekdays">
+        <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+      </div>
+      <div class="calendar-grid" id="calendarioGrid"></div>
+    </div>
+  </section>
+
+  <!-- CUOTAS -->
+  <section class="view" id="view-cuotas">
+    <div class="stats-nav">
+      <button onclick="cambiarMesCuotas(-1)" aria-label="Mes anterior">←</button>
+      <div class="stats-label" id="cuotasMesLabel"></div>
+      <button onclick="cambiarMesCuotas(1)" aria-label="Mes siguiente">→</button>
+    </div>
+    <div class="stat-row">
+      <div class="stat-box ok">
+        <div class="num" id="cuotasCobrado">$0</div>
+        <div class="label">Cobrado</div>
+      </div>
+      <div class="stat-box warn">
+        <div class="num" id="cuotasPendiente">$0</div>
+        <div class="label">Pendiente</div>
+      </div>
+    </div>
+    <div class="filter-row" id="filtroTurnoCuotas"></div>
+    <div class="section-actions">
+      <button class="btn secondary" onclick="marcarTodasCuotasPagadas()">✓ Marcar filtradas como pagadas</button>
+    </div>
+    <div class="card">
+      <h2>Alumnos</h2>
+      <div id="listaCuotas"></div>
+    </div>
+  </section>
+
+  <!-- DETALLE DE ALUMNO -->
+  <section class="view" id="view-alumno-detalle">
+    <div class="card" id="detalleAlumnoHeader"></div>
+
+    <div class="card">
+      <h2>Próximos turnos</h2>
+      <div id="detalleProximosTurnos"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cuotas recientes</h2>
+      <div id="detalleCuotas"></div>
+    </div>
+
+    <div class="card">
+      <h2>Notas de trabajo</h2>
+      <textarea id="f_detalleNotas" placeholder="Técnica, repertorio, observaciones..."></textarea>
+      <button type="button" class="btn secondary" onclick="guardarNotasAlumno()">💾 Guardar notas</button>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="view" id="view-ajustes">
+    <div class="card">
+      <h2>🎨 Diseño</h2>
+      <label>Paleta de color</label>
+      <div class="paleta-grid" id="paletaGrid"></div>
+      <div class="checkbox-line" style="margin-top:12px;">
+        <input type="checkbox" id="f_modoOscuro" onchange="toggleModoOscuro()">
+        <span>🌙 Modo oscuro</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎤 Turnos fijos</h2>
+      <p class="ajustes-desc">Los dos horarios del taller. El día de la semana queda fijo; podés ajustar los horarios si cambian.</p>
+      <div id="turnosConfigBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>💲 Cuota mensual</h2>
+      <p class="ajustes-desc">Monto por defecto que se sugiere al cargar un alumno nuevo (se puede cambiar por alumno).</p>
+      <input type="number" id="f_cuotaDefault" step="500" min="0" inputmode="numeric">
+      <button type="button" class="btn secondary" onclick="guardarCuotaDefault()">Guardar monto</button>
+    </div>
+
+    <div class="card">
+      <h2>❓ Ayuda</h2>
+      <p class="ajustes-desc">¿Te olvidaste cómo se usa alguna parte? Volvé a ver la introducción rápida.</p>
+      <button type="button" class="btn secondary" onclick="mostrarTutorial()">Ver el tutorial otra vez</button>
+    </div>
+
+    <div class="card">
+      <h2>💾 Datos</h2>
+      <p class="ajustes-desc">Tus datos se guardan solo en este dispositivo (localStorage). Exportá un respaldo periódicamente por si cambiás de celular o borrás el navegador.</p>
+      <button type="button" class="btn primary" onclick="exportarDatos()">⬇️ Exportar datos (JSON)</button>
+
+      <label style="margin-top:16px;">Importar datos desde archivo</label>
+      <input type="file" id="importFile" accept="application/json,.json">
+      <button type="button" class="btn secondary" onclick="importarDatos()">⬆️ Importar (reemplaza los datos actuales)</button>
+
+      <div style="margin-top:16px;font-size:13px;color:var(--text-dim);" id="ajustesConteo"></div>
+
+      <button type="button" class="btn danger" style="margin-top:16px;" onclick="borrarTodo()">🗑️ Borrar todos los datos</button>
+    </div>
+  </section>
+
+</main>
+
+<button class="fab" id="fabBtn">+</button>
+
+<nav class="bottomnav">
+  <button data-view="dashboard" class="active"><span class="ic">🏠</span>Inicio</button>
+  <button data-view="alumnos"><span class="ic">👤</span>Alumnos</button>
+  <button data-view="turnos"><span class="ic">📅</span>Turnos</button>
+  <button data-view="cuotas"><span class="ic">💲</span>Cuotas</button>
+  <button data-view="ajustes"><span class="ic">⚙️</span>Config</button>
+</nav>
+
+<!-- overlay / bottom sheet -->
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheetContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- tutorial de bienvenida -->
+<div class="tutorial-overlay" id="tutorialOverlay">
+  <div class="tutorial-card">
+    <button type="button" class="tutorial-skip" id="tutorialSkipBtn" onclick="cerrarTutorial()">Saltar</button>
+    <div class="tutorial-icon" id="tutorialIcon">🎤</div>
+    <h2 class="tutorial-title" id="tutorialTitle"></h2>
+    <p class="tutorial-desc" id="tutorialDesc"></p>
+    <div class="tutorial-dots" id="tutorialDots"></div>
+    <div class="tutorial-nav">
+      <button type="button" class="btn secondary" id="tutorialBackBtn" onclick="tutorialPaso(-1)">Atrás</button>
+      <button type="button" class="btn primary" id="tutorialNextBtn" onclick="tutorialPaso(1)">Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   ESTRUCTURA DE DATOS
+   ========================================================= */
+const STORAGE_KEY = 'taller_canto_salud_mental_v1';
+
+const TURNOS_DEFAULT = {
+  mie: {dia:3, label:'Miércoles', horaEntrada:'11:00', horaSalida:'12:30'},
+  vie: {dia:5, label:'Viernes',   horaEntrada:'18:00', horaSalida:'19:30'}
+};
+const TURNO_KEYS = ['mie','vie'];
+const TURNO_COLORES = {mie:'#c1683d', vie:'#3f6ea8'};
+
+let db = {
+  alumnos: [],       // {id, nombre, tipo, contacto, color, turnos:['mie','vie'], cuota, notas, activo:true}
+  cuotas:  [],       // {id, alumnoId, periodo:'YYYY-MM', monto, pagada, fechaPago}
+  asistencias: [],   // {id, fecha:'YYYY-MM-DD', turno:'mie'|'vie', alumnoId, presente}
+  canceladas: [],    // ['YYYY-MM-DD|turno', ...]
+  notasGenerales: [],// {id, texto, hecha}
+  config:  {cuotaDefault:35000, turnos: JSON.parse(JSON.stringify(TURNOS_DEFAULT)), paleta:'tierra', modoOscuro:false, tutorialVisto:false}
+};
+
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      db.alumnos = parsed.alumnos || [];
+      db.cuotas = parsed.cuotas || [];
+      db.asistencias = parsed.asistencias || [];
+      db.canceladas = parsed.canceladas || [];
+      db.notasGenerales = parsed.notasGenerales || [];
+      db.config = Object.assign(
+        {cuotaDefault:35000, turnos: JSON.parse(JSON.stringify(TURNOS_DEFAULT)), paleta:'tierra', modoOscuro:false, tutorialVisto:false},
+        parsed.config||{}
+      );
+      if(!db.config.turnos) db.config.turnos = JSON.parse(JSON.stringify(TURNOS_DEFAULT));
+    }
+    db.alumnos.forEach(a=>{
+      if(!a.tipo) a.tipo = 'adulto';
+      if(!Array.isArray(a.turnos)) a.turnos = [];
+      if(typeof a.notas !== 'string') a.notas = '';
+      if(typeof a.cuota !== 'number') a.cuota = db.config.cuotaDefault;
+    });
+  }catch(e){
+    console.error('Error leyendo datos', e);
+  }
+}
+
+function saveDB(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+/* helpers de acceso */
+function getAlumno(id){ return db.alumnos.find(a => a.id === id); }
+function alumnoNombre(id){ const a = getAlumno(id); return a ? a.nombre : '(alumno eliminado)'; }
+function alumnoColor(id){ const a = getAlumno(id); return a ? a.color : '#999'; }
+function alumnosDeTurno(turnoKey){ return db.alumnos.filter(a=>Array.isArray(a.turnos) && a.turnos.includes(turnoKey)); }
+
+const COLOR_SWATCHES = ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#a855f7','#ec4899','#78716c'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS_LARGOS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+/* =========================================================
+   NAVEGACIÓN
+   ========================================================= */
+const views = ['dashboard','alumnos','turnos','cuotas','ajustes'];
+const titles = {dashboard:'🎤 Taller Canto y SM', alumnos:'👤 Alumnos', turnos:'📅 Turnos', cuotas:'💲 Cuotas', ajustes:'⚙️ Ajustes'};
+
+function goTo(view){
+  currentAlumnoDetalleId = null;
+  document.getElementById('view-alumno-detalle').classList.remove('active');
+  document.getElementById('backBtn').style.display = 'none';
+  views.forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('active', v===view);
+  });
+  document.querySelectorAll('.bottomnav button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.view===view);
+  });
+  document.getElementById('pageTitle').textContent = titles[view];
+  document.getElementById('fabBtn').style.display = (view==='alumnos') ? 'flex' : 'none';
+  renderAll();
+}
+
+document.querySelectorAll('.bottomnav button').forEach(b=>{
+  b.addEventListener('click', ()=>goTo(b.dataset.view));
+});
+
+document.getElementById('fabBtn').addEventListener('click', ()=>{
+  const active = document.querySelector('.bottomnav button.active');
+  if(active && active.dataset.view==='alumnos') openAlumnoForm();
+});
+
+/* =========================================================
+   BOTTOM SHEET GENÉRICO
+   ========================================================= */
+const overlay = document.getElementById('overlay');
+const sheetContent = document.getElementById('sheetContent');
+
+function openSheet(html){
+  sheetContent.innerHTML = '<div class="sheet-handle"></div>' + html;
+  overlay.classList.add('show');
+}
+function closeSheet(){
+  overlay.classList.remove('show');
+  sheetContent.innerHTML = '';
+}
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeSheet(); });
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+function money(n){
+  n = Number(n)||0;
+  return '$' + n.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function escapeAttr(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function nombreDiaFecha(fechaStr){
+  const f = new Date(fechaStr+'T00:00:00');
+  return `${DIAS_LARGOS[f.getDay()]} ${f.getDate()}`;
+}
+function formatoFechaLarga(fechaStr){
+  const f = new Date(fechaStr+'T00:00:00');
+  return `${DIAS_LARGOS[f.getDay()]} ${f.getDate()} de ${MESES[f.getMonth()]}`;
+}
+function diffMinutos(horaA, horaB){
+  const [ha,ma] = horaA.split(':').map(Number);
+  const [hb,mb] = horaB.split(':').map(Number);
+  return (hb*60+mb) - (ha*60+ma);
+}
+function formatDuracion(min){
+  const h = Math.floor(min/60), m = min%60;
+  return `${h>0?h+'h ':''}${m>0?m+'m':''}`.trim() || '0m';
+}
+function periodoDeFecha(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function periodoActual(){ return periodoDeFecha(new Date()); }
+function periodoLabel(periodo){
+  const [y,m] = periodo.split('-').map(Number);
+  const nombre = MESES[m-1];
+  return `${nombre.charAt(0).toUpperCase()+nombre.slice(1)} ${y}`;
+}
+function getMonday(d){
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = (day===0 ? -6 : 1-day);
+  date.setDate(date.getDate()+diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+
+/* =========================================================
+   ALUMNOS: alta / edición / baja
+   ========================================================= */
+function turnosChipsHtml(seleccionados){
+  const sel = seleccionados || [];
+  return TURNO_KEYS.map(k=>{
+    const t = db.config.turnos[k];
+    const checked = sel.includes(k);
+    return `<label class="dia-chip ${checked?'sel':''}">
+      <input type="checkbox" value="${k}" ${checked?'checked':''} onchange="this.parentElement.classList.toggle('sel', this.checked)">
+      ${t.label} ${t.horaEntrada}-${t.horaSalida}
+    </label>`;
+  }).join('');
+}
+function leerTurnosSeleccionadosForm(){
+  return Array.from(document.querySelectorAll('#turnosChipsBox input:checked')).map(el=>el.value);
+}
+
+function openAlumnoForm(id){
+  const editing = id ? getAlumno(id) : null;
+  const swatchesHtml = COLOR_SWATCHES.map(c=>
+    `<button type="button" class="swatch ${editing && editing.color===c ? 'sel':''}" style="background:${c}" data-color="${c}"></button>`
+  ).join('');
+
+  openSheet(`
+    <h3>${editing ? 'Editar alumno' : 'Nuevo alumno'}</h3>
+    <label>Nombre</label>
+    <input type="text" id="f_nombre" value="${editing ? escapeAttr(editing.nombre) : ''}" placeholder="Nombre del alumno">
+
+    <label>Cuota mensual</label>
+    <input type="number" id="f_cuota" min="0" step="500" inputmode="numeric" value="${editing ? editing.cuota : db.config.cuotaDefault}">
+
+    <label>Turno(s) al que asiste</label>
+    <div class="dias-chips" id="turnosChipsBox">${turnosChipsHtml(editing ? editing.turnos : [])}</div>
+
+    <label>¿A quién le mando el WhatsApp?</label>
+    <div class="row2">
+      <label class="tipo-option ${(!editing || editing.tipo!=='nino') ? 'sel':''}" id="tipoOptAdulto">
+        <input type="radio" name="f_tipo" value="adulto" ${(!editing || editing.tipo!=='nino') ? 'checked':''} onchange="toggleContactoField()">
+        <span>🧑 Adulto<br><small>le escribo a él/ella</small></span>
+      </label>
+      <label class="tipo-option ${editing && editing.tipo==='nino' ? 'sel':''}" id="tipoOptNino">
+        <input type="radio" name="f_tipo" value="nino" ${editing && editing.tipo==='nino' ? 'checked':''} onchange="toggleContactoField()">
+        <span>🧒 Niño/a<br><small>le escribo al padre/madre</small></span>
+      </label>
+    </div>
+
+    <div id="contactoRow" style="display:${editing && editing.tipo==='nino' ? 'block':'none'};">
+      <label>Contacto (madre/padre, opcional)</label>
+      <input type="text" id="f_contacto" value="${editing ? escapeAttr(editing.contacto||'') : ''}" placeholder="Ej: Mamá de Pepito">
+    </div>
+
+    <label>Color identificador</label>
+    <div class="row2" style="align-items:center;">
+      <input type="color" id="f_color" value="${editing ? editing.color : COLOR_SWATCHES[db.alumnos.length % COLOR_SWATCHES.length]}">
+      <div class="swatches" id="swatchPicker" style="flex:3;">${swatchesHtml}</div>
+    </div>
+
+    <label>Notas de trabajo (opcional)</label>
+    <textarea id="f_notas" placeholder="Técnica, repertorio, observaciones...">${editing ? escapeHtml(editing.notas||'') : ''}</textarea>
+
+    <div class="btn-row">
+      ${editing ? `<button class="btn danger" onclick="eliminarAlumno('${editing.id}')">Eliminar</button>` : ''}
+      <button class="btn primary" onclick="guardarAlumno(${editing ? `'${editing.id}'` : 'null'})">Guardar</button>
+    </div>
+  `);
+
+  document.querySelectorAll('#swatchPicker .swatch').forEach(sw=>{
+    sw.addEventListener('click', ()=>{
+      document.getElementById('f_color').value = sw.dataset.color;
+      document.querySelectorAll('#swatchPicker .swatch').forEach(s=>s.classList.remove('sel'));
+      sw.classList.add('sel');
+    });
+  });
+}
+
+function toggleContactoField(){
+  const tipo = document.querySelector('input[name="f_tipo"]:checked').value;
+  document.getElementById('contactoRow').style.display = tipo==='nino' ? 'block' : 'none';
+  document.getElementById('tipoOptNino').classList.toggle('sel', tipo==='nino');
+  document.getElementById('tipoOptAdulto').classList.toggle('sel', tipo==='adulto');
+}
+
+function guardarAlumno(id){
+  const nombre = document.getElementById('f_nombre').value.trim();
+  const cuota = parseFloat(document.getElementById('f_cuota').value) || 0;
+  const tipo = document.querySelector('input[name="f_tipo"]:checked').value;
+  const contacto = document.getElementById('f_contacto').value.trim();
+  const color = document.getElementById('f_color').value;
+  const notas = document.getElementById('f_notas').value.trim();
+  const turnos = leerTurnosSeleccionadosForm();
+
+  if(!nombre){ showToast('Poné un nombre'); return; }
+  if(turnos.length===0){ showToast('Elegí al menos un turno'); return; }
+
+  if(id){
+    const a = getAlumno(id);
+    Object.assign(a, {nombre, cuota, tipo, contacto, color, notas, turnos});
+  }else{
+    db.alumnos.push({id: uid(), nombre, cuota, tipo, contacto, color, notas, turnos, activo:true});
+  }
+  saveDB();
+  closeSheet();
+  renderAll();
+  showToast('Alumno guardado');
+}
+
+function eliminarAlumno(id){
+  if(!confirm('¿Eliminar alumno? También se borrarán sus cuotas y asistencias registradas.')) return;
+  const eraElAbierto = currentAlumnoDetalleId === id;
+  db.alumnos = db.alumnos.filter(a=>a.id!==id);
+  db.cuotas = db.cuotas.filter(c=>c.alumnoId!==id);
+  db.asistencias = db.asistencias.filter(a=>a.alumnoId!==id);
+  saveDB();
+  closeSheet();
+  if(eraElAbierto){ goTo('alumnos'); } else { renderAll(); }
+  showToast('Alumno eliminado');
+}
+
+function turnosBadgeTexto(turnos){
+  return (turnos||[]).map(k=>db.config.turnos[k].label).join(' y ');
+}
+
+function renderAlumnos(){
+  const cont = document.getElementById('listaAlumnos');
+  if(db.alumnos.length===0){
+    cont.innerHTML = '<div class="card"><div class="empty-msg">No hay alumnos todavía. Tocá el botón + para agregar el primero.</div></div>';
+    return;
+  }
+  cont.innerHTML = db.alumnos.map(a=>{
+    const deuda = deudaAlumno(a.id);
+    return `
+    <div class="card" onclick="abrirDetalleAlumno('${a.id}')" style="cursor:pointer;">
+      <div class="list-item" style="border:none;padding:0;">
+        <div class="dot" style="background:${a.color}"></div>
+        <div class="item-main">
+          <div class="item-title">${a.tipo==='adulto'?'🧑':'🧒'} ${escapeHtml(a.nombre)}</div>
+          <div class="item-sub">${money(a.cuota)}/mes · ${turnosBadgeTexto(a.turnos)}</div>
+        </div>
+        <div class="item-right" style="color:${deuda>0?'var(--warn)':'var(--ok)'}">
+          <div style="font-size:11px;font-weight:600;">${deuda>0?'Pendiente':'Al día'}</div>
+          ${deuda>0 ? `<div>${money(deuda)}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   CUOTAS
+   ========================================================= */
+function getCuota(alumnoId, periodo){
+  const a = getAlumno(alumnoId);
+  const rec = db.cuotas.find(c=>c.alumnoId===alumnoId && c.periodo===periodo);
+  if(rec) return rec;
+  return {alumnoId, periodo, monto: a?a.cuota:0, pagada:false, fechaPago:null, virtual:true};
+}
+function periodosConRegistro(alumnoId){
+  const set = new Set(db.cuotas.filter(c=>c.alumnoId===alumnoId).map(c=>c.periodo));
+  set.add(periodoActual());
+  return Array.from(set);
+}
+function deudaAlumno(alumnoId){
+  return periodosConRegistro(alumnoId)
+    .map(p=>getCuota(alumnoId,p))
+    .filter(c=>!c.pagada)
+    .reduce((s,c)=>s+Number(c.monto||0),0);
+}
+function setCuota(alumnoId, periodo, cambios){
+  let rec = db.cuotas.find(c=>c.alumnoId===alumnoId && c.periodo===periodo);
+  if(!rec){
+    rec = {id: uid(), alumnoId, periodo, monto: getAlumno(alumnoId).cuota, pagada:false, fechaPago:null};
+    db.cuotas.push(rec);
+  }
+  Object.assign(rec, cambios);
+  return rec;
+}
+function toggleCuotaRapida(alumnoId, periodo, ev){
+  if(ev) ev.stopPropagation();
+  const actual = getCuota(alumnoId, periodo);
+  const nuevaPagada = !actual.pagada;
+  setCuota(alumnoId, periodo, {pagada: nuevaPagada, fechaPago: nuevaPagada ? new Date().toISOString().slice(0,10) : null});
+  saveDB();
+  renderAll();
+}
+
+let cuotasFecha = new Date();
+let filtroTurnoCuotas = 'todos';
+
+function cambiarMesCuotas(delta){
+  cuotasFecha.setMonth(cuotasFecha.getMonth()+delta);
+  renderCuotas();
+}
+function setFiltroTurnoCuotas(v){ filtroTurnoCuotas = v; renderAll(); }
+
+function renderFiltroTurnoCuotas(){
+  const cont = document.getElementById('filtroTurnoCuotas');
+  let chips = `<button class="filter-chip ${filtroTurnoCuotas==='todos'?'active':''}" onclick="setFiltroTurnoCuotas('todos')">Todos</button>`;
+  chips += TURNO_KEYS.map(k=>`<button class="filter-chip ${filtroTurnoCuotas===k?'active':''}" onclick="setFiltroTurnoCuotas('${k}')">${db.config.turnos[k].label}</button>`).join('');
+  cont.innerHTML = chips;
+}
+
+function abrirWhatsappCuota(alumnoId, periodo){
+  const a = getAlumno(alumnoId);
+  const c = getCuota(alumnoId, periodo);
+  const mesLabel = periodoLabel(periodo);
+  let msg;
+  if(a.tipo === 'adulto'){
+    msg = `Hola ${a.nombre}, ¿cómo estás? Te recuerdo que la cuota de ${mesLabel} del taller de canto es de ${money(c.monto)}. ¡Gracias!`;
+  }else{
+    const contacto = a.contacto ? a.contacto.trim() : '';
+    const saludo = contacto ? `Hola ${contacto}, ¿cómo estás?` : 'Hola, ¿cómo estás?';
+    msg = `${saludo}\nTe recuerdo que la cuota de ${mesLabel} de ${a.nombre} en el taller de canto es de ${money(c.monto)}. ¡Gracias!`;
+  }
+  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function openCuotaForm(alumnoId, periodo){
+  const a = getAlumno(alumnoId);
+  const c = getCuota(alumnoId, periodo);
+  openSheet(`
+    <h3>${escapeHtml(a.nombre)} · ${periodoLabel(periodo)}</h3>
+    <label>Monto de la cuota</label>
+    <input type="number" id="f_c_monto" min="0" step="500" inputmode="numeric" value="${c.monto}">
+
+    <div class="checkbox-line">
+      <input type="checkbox" id="f_c_pagada" ${c.pagada?'checked':''}>
+      <span>Ya la pagó</span>
+    </div>
+
+    <label>Fecha de pago (opcional)</label>
+    <input type="date" id="f_c_fecha" value="${c.fechaPago||''}">
+
+    <button type="button" class="btn whatsapp" onclick="abrirWhatsappCuota('${alumnoId}','${periodo}')">📲 Enviar recordatorio por WhatsApp</button>
+
+    <div class="btn-row">
+      ${!c.virtual ? `<button class="btn danger" onclick="eliminarRegistroCuota('${alumnoId}','${periodo}')">Restablecer</button>` : ''}
+      <button class="btn primary" onclick="guardarCuotaForm('${alumnoId}','${periodo}')">Guardar</button>
+    </div>
+  `);
+}
+
+function guardarCuotaForm(alumnoId, periodo){
+  const monto = parseFloat(document.getElementById('f_c_monto').value)||0;
+  const pagada = document.getElementById('f_c_pagada').checked;
+  const fechaPago = document.getElementById('f_c_fecha').value || (pagada ? new Date().toISOString().slice(0,10) : null);
+  setCuota(alumnoId, periodo, {monto, pagada, fechaPago: pagada?fechaPago:null});
+  saveDB();
+  closeSheet();
+  renderAll();
+  showToast('Cuota guardada');
+}
+
+function eliminarRegistroCuota(alumnoId, periodo){
+  if(!confirm('¿Restablecer esta cuota a pendiente (monto por defecto)?')) return;
+  db.cuotas = db.cuotas.filter(c=>!(c.alumnoId===alumnoId && c.periodo===periodo));
+  saveDB();
+  closeSheet();
+  renderAll();
+  showToast('Cuota restablecida');
+}
+
+function marcarTodasCuotasPagadas(){
+  const periodo = periodoDeFecha(cuotasFecha);
+  let alumnos = db.alumnos;
+  if(filtroTurnoCuotas!=='todos') alumnos = alumnos.filter(a=>a.turnos.includes(filtroTurnoCuotas));
+  const pendientes = alumnos.filter(a=>!getCuota(a.id,periodo).pagada);
+  if(pendientes.length===0){ showToast('No hay cuotas pendientes en este filtro'); return; }
+  if(!confirm(`¿Marcar ${pendientes.length} cuota(s) de ${periodoLabel(periodo)} como pagadas?`)) return;
+  pendientes.forEach(a=> setCuota(a.id, periodo, {pagada:true, fechaPago:new Date().toISOString().slice(0,10)}));
+  saveDB();
+  renderAll();
+  showToast('Cuotas marcadas como pagadas');
+}
+
+function renderCuotas(){
+  renderFiltroTurnoCuotas();
+  const periodo = periodoDeFecha(cuotasFecha);
+  document.getElementById('cuotasMesLabel').textContent = periodoLabel(periodo);
+
+  let alumnos = db.alumnos;
+  if(filtroTurnoCuotas!=='todos') alumnos = alumnos.filter(a=>a.turnos.includes(filtroTurnoCuotas));
+
+  let cobrado = 0, pendiente = 0;
+  const filas = alumnos.map(a=>{
+    const c = getCuota(a.id, periodo);
+    if(c.pagada) cobrado += Number(c.monto||0); else pendiente += Number(c.monto||0);
+    return {alumno:a, cuota:c};
+  });
+
+  document.getElementById('cuotasCobrado').textContent = money(cobrado);
+  document.getElementById('cuotasPendiente').textContent = money(pendiente);
+
+  const cont = document.getElementById('listaCuotas');
+  if(filas.length===0){
+    cont.innerHTML = '<div class="empty-msg">No hay alumnos en este filtro.</div>';
+    return;
+  }
+  cont.innerHTML = filas.map(({alumno,cuota})=>`
+    <div class="list-item" onclick="openCuotaForm('${alumno.id}','${periodo}')" style="cursor:pointer;">
+      <div class="dot" style="background:${alumno.color}"></div>
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(alumno.nombre)}</div>
+        <div class="item-sub">${money(cuota.monto)}</div>
+      </div>
+      <button type="button" class="toggle-pill ${cuota.pagada?'pagada':'pendiente'}" onclick="toggleCuotaRapida('${alumno.id}','${periodo}', event)">${cuota.pagada?'Pagada':'Pendiente'}</button>
+    </div>
+  `).join('');
+}
+
+/* =========================================================
+   TURNOS (calendario de clases fijas)
+   ========================================================= */
+let calendarioFecha = new Date();
+let filtroTurnoCalendario = 'todos';
+
+function setFiltroTurnoCalendario(v){ filtroTurnoCalendario = v; renderAll(); }
+
+function renderFiltroTurnoCalendario(){
+  const cont = document.getElementById('filtroTurnoCalendario');
+  let chips = `<button class="filter-chip ${filtroTurnoCalendario==='todos'?'active':''}" onclick="setFiltroTurnoCalendario('todos')">Todos</button>`;
+  chips += TURNO_KEYS.map(k=>`<button class="filter-chip ${filtroTurnoCalendario===k?'active':''}" onclick="setFiltroTurnoCalendario('${k}')">${db.config.turnos[k].label}</button>`).join('');
+  cont.innerHTML = chips;
+}
+
+function cambiarMesCalendario(delta){
+  calendarioFecha.setMonth(calendarioFecha.getMonth()+delta);
+  renderCalendario();
+}
+
+function turnoKeyDeFecha(fechaStr){
+  const dow = new Date(fechaStr+'T00:00:00').getDay();
+  return TURNO_KEYS.find(k=>db.config.turnos[k].dia===dow) || null;
+}
+function esCancelada(fechaStr, turnoKey){
+  return db.canceladas.includes(`${fechaStr}|${turnoKey}`);
+}
+function toggleCancelada(fechaStr, turnoKey){
+  const clave = `${fechaStr}|${turnoKey}`;
+  const idx = db.canceladas.indexOf(clave);
+  if(idx>=0) db.canceladas.splice(idx,1); else db.canceladas.push(clave);
+  saveDB();
+}
+
+function renderCalendario(){
+  renderFiltroTurnoCalendario();
+  const y = calendarioFecha.getFullYear(), m = calendarioFecha.getMonth();
+  const label = calendarioFecha.toLocaleDateString('es-AR', {month:'long', year:'numeric'});
+  document.getElementById('calendarioMesLabel').textContent = label.charAt(0).toUpperCase()+label.slice(1);
+
+  const primerDiaMes = new Date(y, m, 1);
+  const diasEnMes = new Date(y, m+1, 0).getDate();
+  const offsetInicio = (primerDiaMes.getDay()+6)%7; // 0=Lunes
+  const hoyStr = new Date().toISOString().slice(0,10);
+
+  let celdas = '';
+  for(let i=0;i<offsetInicio;i++){
+    celdas += `<div class="cal-cell empty"></div>`;
+  }
+  for(let dia=1; dia<=diasEnMes; dia++){
+    const fechaStr = `${y}-${String(m+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    const turnoKey = turnoKeyDeFecha(fechaStr);
+    const esHoy = fechaStr===hoyStr;
+    const mostrar = turnoKey && (filtroTurnoCalendario==='todos' || filtroTurnoCalendario===turnoKey);
+    const cancelada = turnoKey && esCancelada(fechaStr, turnoKey);
+    const dots = mostrar ? `<span class="cal-dot" style="background:${cancelada?'#999':TURNO_COLORES[turnoKey]}"></span>` : '';
+    celdas += `
+      <button type="button" class="cal-cell ${esHoy?'today':''} ${mostrar?'has-turno':''} ${cancelada?'cancelada':''}" onclick="abrirDiaCalendario('${fechaStr}')">
+        <span class="cal-day-num">${dia}</span>
+        <span class="cal-dots">${dots}</span>
+      </button>
+    `;
+  }
+
+  document.getElementById('calendarioGrid').innerHTML = celdas;
+}
+
+function abrirDiaCalendario(fechaStr){
+  const turnoKey = turnoKeyDeFecha(fechaStr);
+  if(!turnoKey){
+    openSheet(`<h3>${formatoFechaLarga(fechaStr)}</h3><div class="empty-msg">No hay clase este día 🌿</div>`);
+    return;
+  }
+  const t = db.config.turnos[turnoKey];
+  const cancelada = esCancelada(fechaStr, turnoKey);
+  const alumnos = alumnosDeTurno(turnoKey);
+  const periodo = periodoDeFecha(new Date(fechaStr+'T00:00:00'));
+
+  const alumnosHtml = alumnos.length ? alumnos.map(a=>{
+    const asis = db.asistencias.find(x=>x.fecha===fechaStr && x.turno===turnoKey && x.alumnoId===a.id);
+    const presente = asis ? !!asis.presente : false;
+    const cuota = getCuota(a.id, periodo);
+    return `
+    <div class="list-item">
+      <div class="dot" style="background:${a.color}"></div>
+      <div class="item-main" onclick="closeSheet(); abrirDetalleAlumno('${a.id}')" style="cursor:pointer;">
+        <div class="item-title">${escapeHtml(a.nombre)}</div>
+        <div class="item-sub">Cuota ${periodoLabel(periodo)}: <span class="badge ${cuota.pagada?'pagada':'pendiente'}">${cuota.pagada?'Pagada':'Pendiente'}</span></div>
+      </div>
+      <label class="checkbox-line" style="padding:0;" title="Asistió">
+        <input type="checkbox" ${presente?'checked':''} onchange="toggleAsistencia('${fechaStr}','${turnoKey}','${a.id}')">
+      </label>
+    </div>`;
+  }).join('') : '<div class="empty-msg">Nadie asignado a este turno todavía.</div>';
+
+  openSheet(`
+    <h3>${formatoFechaLarga(fechaStr)}</h3>
+    <div class="turno-block">
+      <div class="turno-block-head">
+        <span>${t.label} · ${t.horaEntrada}-${t.horaSalida}${cancelada?' · <span style=\"color:var(--danger)\">Cancelada</span>':''}</span>
+      </div>
+      <div class="day-detail-list">${alumnosHtml}</div>
+    </div>
+    <button class="btn secondary" onclick="toggleCancelada('${fechaStr}','${turnoKey}'); closeSheet(); abrirDiaCalendario('${fechaStr}'); renderAll();">${cancelada?'↩️ Reactivar esta clase':'🚫 Cancelar esta clase'}</button>
+  `);
+}
+
+function toggleAsistencia(fechaStr, turnoKey, alumnoId){
+  let rec = db.asistencias.find(x=>x.fecha===fechaStr && x.turno===turnoKey && x.alumnoId===alumnoId);
+  if(!rec){
+    rec = {id: uid(), fecha:fechaStr, turno:turnoKey, alumnoId, presente:true};
+    db.asistencias.push(rec);
+  }else{
+    rec.presente = !rec.presente;
+  }
+  saveDB();
+}
+
+function irADiaEnCalendario(fechaStr){
+  const [y,m] = fechaStr.split('-').map(Number);
+  calendarioFecha = new Date(y, m-1, 1);
+  goTo('turnos');
+  abrirDiaCalendario(fechaStr);
+}
+
+/* próxima ocurrencia de un turno a partir de una fecha/hora dada */
+function proximaSesion(desde){
+  for(let i=0; i<45; i++){
+    const d = new Date(desde);
+    d.setDate(d.getDate()+i);
+    d.setHours(0,0,0,0);
+    const fechaStr = d.toISOString().slice(0,10);
+    const turnoKey = turnoKeyDeFecha(fechaStr);
+    if(!turnoKey) continue;
+    if(esCancelada(fechaStr, turnoKey)) continue;
+    const t = db.config.turnos[turnoKey];
+    const dt = new Date(`${fechaStr}T${t.horaEntrada}`);
+    if(dt >= desde) return {fecha:fechaStr, turno:turnoKey, dt};
+  }
+  return null;
+}
+function proximasSesiones(desde, cantidad){
+  const out = [];
+  let cursor = new Date(desde);
+  for(let guard=0; guard<60 && out.length<cantidad; guard++){
+    const s = proximaSesion(cursor);
+    if(!s) break;
+    out.push(s);
+    cursor = new Date(s.dt.getTime()+60000);
+  }
+  return out;
+}
+
+/* =========================================================
+   DETALLE DE ALUMNO
+   ========================================================= */
+let currentAlumnoDetalleId = null;
+
+function abrirDetalleAlumno(alumnoId){
+  currentAlumnoDetalleId = alumnoId;
+  views.forEach(v=>document.getElementById('view-'+v).classList.remove('active'));
+  document.getElementById('view-alumno-detalle').classList.add('active');
+  document.querySelectorAll('.bottomnav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('backBtn').style.display = 'flex';
+  document.getElementById('fabBtn').style.display = 'none';
+  renderDetalleAlumno();
+}
+
+function renderDetalleAlumno(){
+  if(!currentAlumnoDetalleId) return;
+  const alumno = getAlumno(currentAlumnoDetalleId);
+  if(!alumno){ goTo('alumnos'); return; }
+
+  document.getElementById('pageTitle').textContent = `${alumno.tipo==='adulto'?'🧑':'🧒'} ${alumno.nombre}`;
+
+  const deuda = deudaAlumno(alumno.id);
+  document.getElementById('detalleAlumnoHeader').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="dot" style="width:22px;height:22px;background:${alumno.color}"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--font-agenda);font-size:19px;font-weight:700;color:var(--primary-dark);">${escapeHtml(alumno.nombre)}</div>
+        <div class="item-sub">${money(alumno.cuota)}/mes · ${turnosBadgeTexto(alumno.turnos)} · ${alumno.tipo==='adulto'?'Adulto':'Niño/a'}</div>
+      </div>
+      <div class="item-right" style="color:${deuda>0?'var(--warn)':'var(--ok)'}">
+        <div style="font-size:11px;font-weight:600;">${deuda>0?'Pendiente':'Al día'}</div>
+        ${deuda>0 ? `<div>${money(deuda)}</div>` : ''}
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary" onclick="openAlumnoForm('${alumno.id}')">✎ Editar datos</button>
+      <button class="btn danger" onclick="eliminarAlumno('${alumno.id}')">Eliminar</button>
+    </div>
+  `;
+
+  const proximas = proximasSesiones(new Date(), 8).filter(s=>alumno.turnos.includes(s.turno)).slice(0,3);
+  document.getElementById('detalleProximosTurnos').innerHTML = proximas.length ? proximas.map(s=>{
+    const t = db.config.turnos[s.turno];
+    return `
+    <div class="list-item" onclick="irADiaEnCalendario('${s.fecha}')" style="cursor:pointer;">
+      <div class="dot" style="background:${TURNO_COLORES[s.turno]}"></div>
+      <div class="item-main">
+        <div class="item-title">${nombreDiaFecha(s.fecha)}</div>
+        <div class="item-sub">${t.horaEntrada}-${t.horaSalida}</div>
+      </div>
+      <div class="item-right">📅</div>
+    </div>`;
+  }).join('') : '<div class="empty-msg">No tiene turnos próximos.</div>';
+
+  const periodos = [];
+  const base = new Date();
+  for(let i=0;i<6;i++){
+    const d = new Date(base.getFullYear(), base.getMonth()-i, 1);
+    periodos.push(periodoDeFecha(d));
+  }
+  document.getElementById('detalleCuotas').innerHTML = periodos.map(p=>{
+    const c = getCuota(alumno.id, p);
+    return `
+    <div class="list-item" onclick="openCuotaForm('${alumno.id}','${p}')" style="cursor:pointer;">
+      <div class="item-main">
+        <div class="item-title" style="font-size:14px;">${periodoLabel(p)}</div>
+        <div class="item-sub">${money(c.monto)}</div>
+      </div>
+      <button type="button" class="toggle-pill ${c.pagada?'pagada':'pendiente'}" onclick="toggleCuotaRapida('${alumno.id}','${p}', event)">${c.pagada?'Pagada':'Pendiente'}</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('f_detalleNotas').value = alumno.notas || '';
+}
+
+function guardarNotasAlumno(){
+  const alumno = getAlumno(currentAlumnoDetalleId);
+  if(!alumno) return;
+  alumno.notas = document.getElementById('f_detalleNotas').value.trim();
+  saveDB();
+  showToast('Notas guardadas');
+}
+
+/* =========================================================
+   NOTAS GENERALES (para preparar)
+   ========================================================= */
+function agregarNotaGeneral(){
+  const input = document.getElementById('f_notaNueva');
+  const texto = input.value.trim();
+  if(!texto){ showToast('Escribí algo para preparar'); return; }
+  db.notasGenerales.push({id: uid(), texto, hecha:false});
+  saveDB();
+  input.value = '';
+  renderAll();
+}
+function toggleNotaGeneral(id){
+  const n = db.notasGenerales.find(n=>n.id===id);
+  if(!n) return;
+  n.hecha = !n.hecha;
+  saveDB();
+  renderAll();
+}
+function eliminarNotaGeneral(id){
+  db.notasGenerales = db.notasGenerales.filter(n=>n.id!==id);
+  saveDB();
+  renderAll();
+}
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+function formatCuentaRegresiva(ms){
+  if(ms<=0) return '¡Es ahora!';
+  const totalMin = Math.round(ms/60000);
+  const dias = Math.floor(totalMin/1440);
+  const horas = Math.floor((totalMin%1440)/60);
+  const mins = totalMin%60;
+  if(dias>0) return `${dias} día${dias!==1?'s':''} y ${horas} hora${horas!==1?'s':''}`;
+  if(horas>0) return `${horas} hora${horas!==1?'s':''} y ${mins} min`;
+  return `${mins} min`;
+}
+
+function renderDashboard(){
+  const ahora = new Date();
+
+  const proximas = proximasSesiones(ahora, 5);
+  const card = document.getElementById('nextClassCard');
+  if(proximas.length===0){
+    card.hidden = true;
+  }else{
+    const s = proximas[0];
+    const t = db.config.turnos[s.turno];
+    const n = alumnosDeTurno(s.turno).length;
+    card.hidden = false;
+    document.getElementById('nextClassCountdown').textContent = formatCuentaRegresiva(s.dt-ahora);
+    document.getElementById('nextClassDot').style.background = TURNO_COLORES[s.turno];
+    document.getElementById('nextClassInfo').textContent = `${nombreDiaFecha(s.fecha)} · ${t.horaEntrada}-${t.horaSalida} · ${n} alumno${n!==1?'s':''}`;
+  }
+
+  document.getElementById('statAlumnos').textContent = db.alumnos.length;
+
+  const proxCont = document.getElementById('dashProximos');
+  proxCont.innerHTML = proximas.length ? proximas.map(s=>{
+    const t = db.config.turnos[s.turno];
+    const n = alumnosDeTurno(s.turno).length;
+    return `
+    <div class="list-item" onclick="irADiaEnCalendario('${s.fecha}')" style="cursor:pointer;">
+      <div class="dot" style="background:${TURNO_COLORES[s.turno]}"></div>
+      <div class="item-main">
+        <div class="item-title">${nombreDiaFecha(s.fecha)}</div>
+        <div class="item-sub">${t.horaEntrada}-${t.horaSalida} · ${n} alumno${n!==1?'s':''}</div>
+      </div>
+      <div class="item-right">📅</div>
+    </div>`;
+  }).join('') : '<div class="empty-msg">No hay turnos próximos (revisá si hay clases canceladas).</div>';
+
+  const periodo = periodoActual();
+  const deudores = db.alumnos
+    .map(a=>({alumno:a, cuota: getCuota(a.id, periodo)}))
+    .filter(x=>!x.cuota.pagada)
+    .sort((a,b)=>b.cuota.monto-a.cuota.monto);
+
+  const totalPendiente = deudores.reduce((s,x)=>s+Number(x.cuota.monto||0),0);
+  document.getElementById('statPendienteMonto').textContent = money(totalPendiente);
+
+  const pendCont = document.getElementById('dashPendientes');
+  pendCont.innerHTML = deudores.length ? deudores.map(x=>`
+    <div class="list-item" style="cursor:pointer;">
+      <div class="dot" style="background:${x.alumno.color}"></div>
+      <div class="item-main" onclick="abrirDetalleAlumno('${x.alumno.id}')">
+        <div class="item-title">${escapeHtml(x.alumno.nombre)}</div>
+      </div>
+      <button type="button" class="toggle-pill pendiente" onclick="toggleCuotaRapida('${x.alumno.id}','${periodo}', event)">${money(x.cuota.monto)}</button>
+    </div>
+  `).join('') : '<div class="empty-msg">Todos al día con la cuota de este mes 🎉</div>';
+
+  const notasPend = db.notasGenerales.filter(n=>!n.hecha);
+  document.getElementById('statPreparar').textContent = notasPend.length;
+
+  const notasCont = document.getElementById('dashNotas');
+  const notasOrdenadas = db.notasGenerales.slice().sort((a,b)=>(a.hecha - b.hecha));
+  notasCont.innerHTML = notasOrdenadas.length ? notasOrdenadas.map(n=>`
+    <div class="checkbox-line ${n.hecha?'done':''}" style="justify-content:space-between;">
+      <label style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <input type="checkbox" ${n.hecha?'checked':''} onchange="toggleNotaGeneral('${n.id}')">
+        <span style="min-width:0;overflow-wrap:break-word;">${escapeHtml(n.texto)}</span>
+      </label>
+      <button type="button" class="btn danger" style="width:auto;margin:0;padding:6px 10px;font-size:12px;" onclick="eliminarNotaGeneral('${n.id}')">🗑</button>
+    </div>
+  `).join('') : '<div class="empty-msg">Nada pendiente por preparar 🎉</div>';
+}
+
+/* =========================================================
+   RENDER GENERAL
+   ========================================================= */
+function renderAll(){
+  renderDashboard();
+  renderAlumnos();
+  renderCalendario();
+  renderCuotas();
+  renderAjustes();
+  if(document.getElementById('view-alumno-detalle').classList.contains('active')) renderDetalleAlumno();
+}
+
+/* =========================================================
+   AJUSTES
+   ========================================================= */
+const PALETAS = {
+  tierra:   {label:'Tierra',   primary:'#c1683d', primaryDark:'#9c522e', cardGradA:'#fff2df', cardGradB:'#ffe3c4', accentText:'#7a3d1c', blob1:'#f2ddba', blob2:'#f6e7cf'},
+  azul:     {label:'Azul',     primary:'#3f6ea8', primaryDark:'#2d5480', cardGradA:'#e3edf9', cardGradB:'#cfe0f4', accentText:'#20456e', blob1:'#c9dcf2', blob2:'#dfeafb'},
+  rojo:     {label:'Rojo',     primary:'#c1493f', primaryDark:'#96362e', cardGradA:'#fbe4e0', cardGradB:'#f6cdc6', accentText:'#7a2a22', blob1:'#f3c9c1', blob2:'#f8ded8'},
+  lila:     {label:'Lila',     primary:'#8a67ab', primaryDark:'#6a4c87', cardGradA:'#efe5f7', cardGradB:'#e2cef0', accentText:'#4f3468', blob1:'#ddc7ec', blob2:'#ece0f5'},
+  amarillo: {label:'Amarillo', primary:'#b6892a', primaryDark:'#8f6a1c', cardGradA:'#fbf1d9', cardGradB:'#f6e3b4', accentText:'#6b4e12', blob1:'#f0dfa0', blob2:'#f7ecc9'},
+  verde:    {label:'Verde',    primary:'#5f8f52', primaryDark:'#456b3a', cardGradA:'#e7f0e0', cardGradB:'#d3e6c4', accentText:'#33501f', blob1:'#cfe3bd', blob2:'#e2eed8'},
+};
+
+function aplicarPaleta(){
+  const p = PALETAS[db.config.paleta] || PALETAS.tierra;
+  const root = document.documentElement;
+  root.style.setProperty('--primary', p.primary);
+  root.style.setProperty('--primary-dark', p.primaryDark);
+  root.style.setProperty('--card-grad-a', p.cardGradA);
+  root.style.setProperty('--card-grad-b', p.cardGradB);
+  root.style.setProperty('--accent-text', p.accentText);
+  root.style.setProperty('--blob-1', p.blob1);
+  root.style.setProperty('--blob-2', p.blob2);
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if(metaTheme) metaTheme.setAttribute('content', p.primary);
+}
+
+function elegirPaleta(key){
+  db.config.paleta = key;
+  saveDB();
+  aplicarPaleta();
+  renderPaletaGrid();
+}
+
+function renderPaletaGrid(){
+  const cont = document.getElementById('paletaGrid');
+  if(!cont) return;
+  cont.innerHTML = Object.keys(PALETAS).map(key=>{
+    const p = PALETAS[key];
+    const sel = (db.config.paleta||'tierra')===key;
+    return `<button type="button" class="paleta-swatch ${sel?'sel':''}" style="background:${p.primary};" onclick="elegirPaleta('${key}')" aria-label="${p.label}">${sel?'✓':''}</button>`;
+  }).join('');
+}
+
+function aplicarModoOscuro(){
+  document.documentElement.setAttribute('data-theme', db.config.modoOscuro ? 'dark' : 'light');
+}
+
+function toggleModoOscuro(){
+  db.config.modoOscuro = document.getElementById('f_modoOscuro').checked;
+  saveDB();
+  aplicarModoOscuro();
+}
+
+function renderTurnosConfig(){
+  const cont = document.getElementById('turnosConfigBox');
+  if(!cont) return;
+  cont.innerHTML = TURNO_KEYS.map(k=>{
+    const t = db.config.turnos[k];
+    const dur = formatDuracion(Math.max(0,diffMinutos(t.horaEntrada,t.horaSalida)));
+    return `
+    <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px;">
+      <label style="margin-top:0;">${t.label}</label>
+      <div class="row2">
+        <input type="time" id="f_turno_${k}_ini" value="${t.horaEntrada}">
+        <input type="time" id="f_turno_${k}_fin" value="${t.horaSalida}">
+      </div>
+      <div class="item-sub" style="margin-top:4px;">Duración: ${dur}</div>
+    </div>`;
+  }).join('') + `<button type="button" class="btn secondary" style="margin-top:0;" onclick="guardarTurnosConfig()">Guardar horarios</button>`;
+}
+
+function guardarTurnosConfig(){
+  TURNO_KEYS.forEach(k=>{
+    const ini = document.getElementById(`f_turno_${k}_ini`).value;
+    const fin = document.getElementById(`f_turno_${k}_fin`).value;
+    if(ini) db.config.turnos[k].horaEntrada = ini;
+    if(fin) db.config.turnos[k].horaSalida = fin;
+  });
+  saveDB();
+  renderAll();
+  showToast('Horarios actualizados');
+}
+
+function guardarCuotaDefault(){
+  const val = parseFloat(document.getElementById('f_cuotaDefault').value)||0;
+  db.config.cuotaDefault = val;
+  saveDB();
+  showToast('Monto por defecto actualizado');
+}
+
+function renderAjustes(){
+  const fCuota = document.getElementById('f_cuotaDefault');
+  if(fCuota && document.activeElement!==fCuota) fCuota.value = db.config.cuotaDefault;
+  const fModo = document.getElementById('f_modoOscuro');
+  if(fModo) fModo.checked = !!db.config.modoOscuro;
+  renderPaletaGrid();
+  renderTurnosConfig();
+  const conteo = document.getElementById('ajustesConteo');
+  if(conteo) conteo.textContent = `Alumnos: ${db.alumnos.length} · Cuotas registradas: ${db.cuotas.length} · Notas: ${db.notasGenerales.length}`;
+}
+
+function exportarDatos(){
+  const data = JSON.stringify(db, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `TallerCantoSaludMental_backup_${fecha}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Datos exportados');
+}
+
+function importarDatos(){
+  const input = document.getElementById('importFile');
+  const file = input.files[0];
+  if(!file){ showToast('Elegí un archivo primero'); return; }
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!parsed || typeof parsed !== 'object') throw new Error('formato inválido');
+      if(!confirm('Esto reemplazará TODOS tus datos actuales. ¿Continuar?')) return;
+      db.alumnos = Array.isArray(parsed.alumnos) ? parsed.alumnos : [];
+      db.cuotas = Array.isArray(parsed.cuotas) ? parsed.cuotas : [];
+      db.asistencias = Array.isArray(parsed.asistencias) ? parsed.asistencias : [];
+      db.canceladas = Array.isArray(parsed.canceladas) ? parsed.canceladas : [];
+      db.notasGenerales = Array.isArray(parsed.notasGenerales) ? parsed.notasGenerales : [];
+      db.config = Object.assign(
+        {cuotaDefault:35000, turnos: JSON.parse(JSON.stringify(TURNOS_DEFAULT)), paleta:'tierra', modoOscuro:false, tutorialVisto:false},
+        parsed.config||{}
+      );
+      db.alumnos.forEach(a=>{
+        if(!Array.isArray(a.turnos)) a.turnos = [];
+        if(typeof a.notas !== 'string') a.notas = '';
+        if(typeof a.cuota !== 'number') a.cuota = db.config.cuotaDefault;
+      });
+      saveDB();
+      aplicarPaleta();
+      aplicarModoOscuro();
+      renderAll();
+      showToast('Datos importados correctamente');
+    }catch(err){
+      showToast('Archivo inválido');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function borrarTodo(){
+  if(!confirm('Esto borra TODOS los alumnos, cuotas y notas. ¿Estás seguro?')) return;
+  if(!confirm('Última confirmación: se perderá todo lo que no hayas exportado. ¿Continuar?')) return;
+  db.alumnos = []; db.cuotas = []; db.asistencias = []; db.canceladas = []; db.notasGenerales = [];
+  saveDB();
+  renderAll();
+  showToast('Datos borrados');
+}
+
+/* =========================================================
+   TUTORIAL DE BIENVENIDA
+   ========================================================= */
+const TUTORIAL_PASOS = [
+  {icon:'🎤', titulo:'¡Bienvenido/a!', desc:'Organizá el Taller de Canto y Salud Mental: alumnos, turnos fijos y cuotas, todo en un solo lugar. Tus datos se guardan solo en este dispositivo.'},
+  {icon:'👤', titulo:'Cargá tus alumnos', desc:'Agregá cada alumno con su cuota mensual, un color identificador y el turno (miércoles y/o viernes) al que asiste.'},
+  {icon:'📅', titulo:'Turnos fijos', desc:'El calendario ya tiene armados los turnos de miércoles 11 a 12:30 y viernes 18 a 19:30. Tocá un día para ver quién asiste, marcar asistencia o cancelar la clase (por ejemplo, un feriado).'},
+  {icon:'💲', titulo:'Llevá las cuotas al día', desc:'En Cuotas navegá mes a mes y marcá quién pagó. Podés mandar un recordatorio por WhatsApp con un toque.'},
+  {icon:'🏠', titulo:'Todo de un vistazo', desc:'En Inicio ves tu próximo turno, quién debe la cuota y lo que tenés para preparar.'},
+  {icon:'⚙️', titulo:'Hacela tuya', desc:'En Ajustes podés cambiar los horarios de los turnos, el monto de cuota por defecto, elegir paleta de color y modo oscuro, y exportar tus datos como respaldo.'}
+];
+let tutorialPasoActual = 0;
+
+function mostrarTutorial(){
+  tutorialPasoActual = 0;
+  renderTutorialPaso();
+  document.getElementById('tutorialOverlay').classList.add('show');
+}
+
+function renderTutorialPaso(){
+  const paso = TUTORIAL_PASOS[tutorialPasoActual];
+  document.getElementById('tutorialIcon').textContent = paso.icon;
+  document.getElementById('tutorialTitle').textContent = paso.titulo;
+  document.getElementById('tutorialDesc').textContent = paso.desc;
+  document.getElementById('tutorialDots').innerHTML = TUTORIAL_PASOS.map((_,i)=>
+    `<div class="tutorial-dot ${i===tutorialPasoActual?'active':''}"></div>`
+  ).join('');
+  document.getElementById('tutorialBackBtn').style.visibility = tutorialPasoActual===0 ? 'hidden' : 'visible';
+  document.getElementById('tutorialNextBtn').textContent = tutorialPasoActual===TUTORIAL_PASOS.length-1 ? 'Empezar' : 'Siguiente';
+}
+
+function tutorialPaso(dir){
+  if(dir>0 && tutorialPasoActual===TUTORIAL_PASOS.length-1){ cerrarTutorial(); return; }
+  tutorialPasoActual = Math.min(TUTORIAL_PASOS.length-1, Math.max(0, tutorialPasoActual+dir));
+  renderTutorialPaso();
+}
+
+function cerrarTutorial(){
+  document.getElementById('tutorialOverlay').classList.remove('show');
+  db.config.tutorialVisto = true;
+  saveDB();
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+loadDB();
+aplicarPaleta();
+aplicarModoOscuro();
+renderAll();
+document.getElementById('fabBtn').style.display = 'none';
+if(!db.config.tutorialVisto) mostrarTutorial();
+
+setInterval(()=>{
+  if(document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+}, 60000);
+</script>
+</body>
+</html>
