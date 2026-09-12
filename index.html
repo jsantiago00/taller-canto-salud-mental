@@ -447,6 +447,7 @@
         <div class="label">Pendiente</div>
       </div>
     </div>
+    <div class="stats-esperado" id="cuotasReparto"></div>
     <div class="filter-row" id="filtroTurnoCuotas"></div>
     <div class="section-actions">
       <button class="btn secondary" onclick="marcarTodasCuotasPagadas()">✓ Marcar filtradas como pagadas</button>
@@ -501,6 +502,24 @@
       <p class="ajustes-desc">Monto por defecto que se sugiere al cargar un alumno nuevo (se puede cambiar por alumno).</p>
       <input type="number" id="f_cuotaDefault" step="500" min="0" inputmode="numeric">
       <button type="button" class="btn secondary" onclick="guardarCuotaDefault()">Guardar monto</button>
+    </div>
+
+    <div class="card">
+      <h2>🤝 Reparto entre profes</h2>
+      <p class="ajustes-desc">Nombres y porcentaje con el que se divide lo cobrado cada mes (se ve en la pestaña Cuotas).</p>
+      <div class="row2">
+        <div>
+          <label>Profe A</label>
+          <input type="text" id="f_repartoNombreA" placeholder="Ej: Juli">
+        </div>
+        <div>
+          <label>Profe B</label>
+          <input type="text" id="f_repartoNombreB" placeholder="Ej: Fe">
+        </div>
+      </div>
+      <label>Porcentaje de Profe A (el resto es para Profe B)</label>
+      <input type="number" id="f_repartoPctA" min="0" max="100" step="1" inputmode="numeric">
+      <button type="button" class="btn secondary" onclick="guardarReparto()">Guardar reparto</button>
     </div>
 
     <div class="card">
@@ -570,6 +589,9 @@ const TURNOS_DEFAULT = {
 };
 const TURNO_KEYS = ['mie','vie'];
 const TURNO_COLORES = {mie:'#c1683d', vie:'#3f6ea8'};
+const REPARTO_DEFAULT = {nombreA:'Juli', nombreB:'Fe', pctA:50};
+const CONFIG_DEFAULT = {cuotaDefault:35000, turnos: TURNOS_DEFAULT, reparto: REPARTO_DEFAULT, paleta:'tierra', modoOscuro:false, tutorialVisto:false};
+function configPorDefecto(){ return JSON.parse(JSON.stringify(CONFIG_DEFAULT)); }
 
 let db = {
   alumnos: [],       // {id, nombre, tipo, contacto, color, turnos:['mie','vie'], cuota, notas, activo:true}
@@ -577,7 +599,7 @@ let db = {
   asistencias: [],   // {id, fecha:'YYYY-MM-DD', turno:'mie'|'vie', alumnoId, presente}
   canceladas: [],    // ['YYYY-MM-DD|turno', ...]
   notasGenerales: [],// {id, texto, hecha}
-  config:  {cuotaDefault:35000, turnos: JSON.parse(JSON.stringify(TURNOS_DEFAULT)), paleta:'tierra', modoOscuro:false, tutorialVisto:false}
+  config:  configPorDefecto()
 };
 
 function uid(){
@@ -595,11 +617,9 @@ function loadDB(){
       db.asistencias = parsed.asistencias || [];
       db.canceladas = parsed.canceladas || [];
       db.notasGenerales = parsed.notasGenerales || [];
-      db.config = Object.assign(
-        {cuotaDefault:35000, turnos: JSON.parse(JSON.stringify(TURNOS_DEFAULT)), paleta:'tierra', modoOscuro:false, tutorialVisto:false},
-        parsed.config||{}
-      );
+      db.config = Object.assign(configPorDefecto(), parsed.config||{});
       if(!db.config.turnos) db.config.turnos = JSON.parse(JSON.stringify(TURNOS_DEFAULT));
+      if(!db.config.reparto) db.config.reparto = JSON.parse(JSON.stringify(REPARTO_DEFAULT));
     }
     db.alumnos.forEach(a=>{
       if(!a.tipo) a.tipo = 'adulto';
@@ -999,6 +1019,23 @@ function marcarTodasCuotasPagadas(){
   showToast('Cuotas marcadas como pagadas');
 }
 
+function calcularReparto(monto){
+  const r = db.config.reparto;
+  const pctA = Number(r.pctA)||0;
+  const pctB = 100-pctA;
+  return {
+    nombreA: r.nombreA, pctA, montoA: monto*pctA/100,
+    nombreB: r.nombreB, pctB, montoB: monto*pctB/100
+  };
+}
+
+function renderRepartoCuotas(cobrado){
+  const cont = document.getElementById('cuotasReparto');
+  if(!cont) return;
+  const r = calcularReparto(cobrado);
+  cont.innerHTML = `🤝 Reparto de lo cobrado: <b>${escapeHtml(r.nombreA)}</b> ${money(r.montoA)} (${r.pctA}%) · <b>${escapeHtml(r.nombreB)}</b> ${money(r.montoB)} (${r.pctB}%)`;
+}
+
 function renderCuotas(){
   renderFiltroTurnoCuotas();
   const periodo = periodoDeFecha(cuotasFecha);
@@ -1016,6 +1053,7 @@ function renderCuotas(){
 
   document.getElementById('cuotasCobrado').textContent = money(cobrado);
   document.getElementById('cuotasPendiente').textContent = money(pendiente);
+  renderRepartoCuotas(cobrado);
 
   const cont = document.getElementById('listaCuotas');
   if(filas.length===0){
@@ -1482,11 +1520,29 @@ function guardarCuotaDefault(){
   showToast('Monto por defecto actualizado');
 }
 
+function guardarReparto(){
+  const nombreA = document.getElementById('f_repartoNombreA').value.trim() || 'Profe A';
+  const nombreB = document.getElementById('f_repartoNombreB').value.trim() || 'Profe B';
+  let pctA = parseFloat(document.getElementById('f_repartoPctA').value);
+  if(isNaN(pctA)) pctA = 50;
+  pctA = Math.min(100, Math.max(0, pctA));
+  db.config.reparto = {nombreA, nombreB, pctA};
+  saveDB();
+  renderAll();
+  showToast('Reparto actualizado');
+}
+
 function renderAjustes(){
   const fCuota = document.getElementById('f_cuotaDefault');
   if(fCuota && document.activeElement!==fCuota) fCuota.value = db.config.cuotaDefault;
   const fModo = document.getElementById('f_modoOscuro');
   if(fModo) fModo.checked = !!db.config.modoOscuro;
+  const fRA = document.getElementById('f_repartoNombreA');
+  const fRB = document.getElementById('f_repartoNombreB');
+  const fRPct = document.getElementById('f_repartoPctA');
+  if(fRA && document.activeElement!==fRA) fRA.value = db.config.reparto.nombreA;
+  if(fRB && document.activeElement!==fRB) fRB.value = db.config.reparto.nombreB;
+  if(fRPct && document.activeElement!==fRPct) fRPct.value = db.config.reparto.pctA;
   renderPaletaGrid();
   renderTurnosConfig();
   const conteo = document.getElementById('ajustesConteo');
@@ -1523,10 +1579,9 @@ function importarDatos(){
       db.asistencias = Array.isArray(parsed.asistencias) ? parsed.asistencias : [];
       db.canceladas = Array.isArray(parsed.canceladas) ? parsed.canceladas : [];
       db.notasGenerales = Array.isArray(parsed.notasGenerales) ? parsed.notasGenerales : [];
-      db.config = Object.assign(
-        {cuotaDefault:35000, turnos: JSON.parse(JSON.stringify(TURNOS_DEFAULT)), paleta:'tierra', modoOscuro:false, tutorialVisto:false},
-        parsed.config||{}
-      );
+      db.config = Object.assign(configPorDefecto(), parsed.config||{});
+      if(!db.config.turnos) db.config.turnos = JSON.parse(JSON.stringify(TURNOS_DEFAULT));
+      if(!db.config.reparto) db.config.reparto = JSON.parse(JSON.stringify(REPARTO_DEFAULT));
       db.alumnos.forEach(a=>{
         if(!Array.isArray(a.turnos)) a.turnos = [];
         if(typeof a.notas !== 'string') a.notas = '';
