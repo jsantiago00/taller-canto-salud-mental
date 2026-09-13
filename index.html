@@ -149,6 +149,7 @@
   }
   .badge.pendiente{background:var(--warn-bg);color:var(--warn);}
   .badge.pagada{background:var(--ok-bg);color:var(--ok);}
+  .badge.parcial{background:var(--danger-bg);color:var(--danger);}
 
   nav.bottomnav{
     position:fixed;bottom:0;left:0;right:0;z-index:20;
@@ -240,6 +241,7 @@
   }
   .toggle-pill.pendiente{background:var(--warn-bg);color:var(--warn);}
   .toggle-pill.pagada{background:var(--ok-bg);color:var(--ok);}
+  .toggle-pill.parcial{background:var(--danger-bg);color:var(--danger);}
 
   .toast{
     position:fixed;left:50%;bottom:calc(90px + var(--safe-bottom));transform:translateX(-50%);
@@ -447,6 +449,13 @@
         <div class="label">Pendiente</div>
       </div>
     </div>
+    <div class="card">
+      <h2>🏠 Alquiler del taller (este mes)</h2>
+      <div class="row2">
+        <input type="number" id="f_alquilerMonto" min="0" step="500" inputmode="numeric">
+        <button type="button" class="btn secondary" style="margin-top:0;" onclick="guardarAlquiler()">Guardar</button>
+      </div>
+    </div>
     <div class="stats-esperado" id="cuotasReparto"></div>
     <div class="filter-row" id="filtroTurnoCuotas"></div>
     <div class="section-actions">
@@ -590,12 +599,13 @@ const TURNOS_DEFAULT = {
 const TURNO_KEYS = ['mie','vie'];
 const TURNO_COLORES = {mie:'#c1683d', vie:'#3f6ea8'};
 const REPARTO_DEFAULT = {nombreA:'Juli', nombreB:'Fe', pctA:50};
-const CONFIG_DEFAULT = {cuotaDefault:35000, turnos: TURNOS_DEFAULT, reparto: REPARTO_DEFAULT, paleta:'tierra', modoOscuro:false, tutorialVisto:false};
+const CONFIG_DEFAULT = {cuotaDefault:35000, alquilerDefault:60000, turnos: TURNOS_DEFAULT, reparto: REPARTO_DEFAULT, paleta:'tierra', modoOscuro:false, tutorialVisto:false};
 function configPorDefecto(){ return JSON.parse(JSON.stringify(CONFIG_DEFAULT)); }
 
 let db = {
   alumnos: [],       // {id, nombre, tipo, contacto, color, turnos:['mie','vie'], cuota, notas, activo:true}
-  cuotas:  [],       // {id, alumnoId, periodo:'YYYY-MM', monto, pagada, fechaPago}
+  cuotas:  [],       // {id, alumnoId, periodo:'YYYY-MM', monto, pagos:[{id,monto,fecha}]}
+  alquileres: [],    // {id, periodo:'YYYY-MM', monto}
   asistencias: [],   // {id, fecha:'YYYY-MM-DD', turno:'mie'|'vie', alumnoId, presente}
   canceladas: [],    // ['YYYY-MM-DD|turno', ...]
   notasGenerales: [],// {id, texto, hecha}
@@ -614,6 +624,7 @@ function loadDB(){
       const parsed = JSON.parse(raw);
       db.alumnos = parsed.alumnos || [];
       db.cuotas = parsed.cuotas || [];
+      db.alquileres = parsed.alquileres || [];
       db.asistencias = parsed.asistencias || [];
       db.canceladas = parsed.canceladas || [];
       db.notasGenerales = parsed.notasGenerales || [];
@@ -626,6 +637,14 @@ function loadDB(){
       if(!Array.isArray(a.turnos)) a.turnos = [];
       if(typeof a.notas !== 'string') a.notas = '';
       if(typeof a.cuota !== 'number') a.cuota = db.config.cuotaDefault;
+    });
+    // migración: pagos parciales reemplazan el viejo pagada/fechaPago
+    db.cuotas.forEach(c=>{
+      if(!Array.isArray(c.pagos)){
+        c.pagos = c.pagada ? [{id:uid(), monto:c.monto, fecha:c.fechaPago||new Date().toISOString().slice(0,10)}] : [];
+      }
+      delete c.pagada;
+      delete c.fechaPago;
     });
   }catch(e){
     console.error('Error leyendo datos', e);
@@ -899,7 +918,33 @@ function getCuota(alumnoId, periodo){
   const a = getAlumno(alumnoId);
   const rec = db.cuotas.find(c=>c.alumnoId===alumnoId && c.periodo===periodo);
   if(rec) return rec;
-  return {alumnoId, periodo, monto: a?a.cuota:0, pagada:false, fechaPago:null, virtual:true};
+  return {alumnoId, periodo, monto: a?a.cuota:0, pagos:[], virtual:true};
+}
+function obtenerOCrearCuota(alumnoId, periodo){
+  let rec = db.cuotas.find(c=>c.alumnoId===alumnoId && c.periodo===periodo);
+  if(!rec){
+    rec = {id: uid(), alumnoId, periodo, monto: getAlumno(alumnoId).cuota, pagos:[]};
+    db.cuotas.push(rec);
+  }
+  if(!Array.isArray(rec.pagos)) rec.pagos = [];
+  return rec;
+}
+function montoPagado(cuota){
+  return (cuota.pagos||[]).reduce((s,p)=>s+Number(p.monto||0),0);
+}
+function saldoCuota(cuota){
+  return Math.max(0, Number(cuota.monto||0) - montoPagado(cuota));
+}
+function estadoCuota(cuota){
+  const pagado = montoPagado(cuota);
+  if(pagado<=0) return 'pendiente';
+  if(pagado < Number(cuota.monto||0)) return 'parcial';
+  return 'pagada';
+}
+function agregarPago(alumnoId, periodo, monto, fecha){
+  const rec = obtenerOCrearCuota(alumnoId, periodo);
+  rec.pagos.push({id: uid(), monto, fecha});
+  return rec;
 }
 function periodosConRegistro(alumnoId){
   const set = new Set(db.cuotas.filter(c=>c.alumnoId===alumnoId).map(c=>c.periodo));
@@ -909,25 +954,42 @@ function periodosConRegistro(alumnoId){
 function deudaAlumno(alumnoId){
   return periodosConRegistro(alumnoId)
     .map(p=>getCuota(alumnoId,p))
-    .filter(c=>!c.pagada)
-    .reduce((s,c)=>s+Number(c.monto||0),0);
-}
-function setCuota(alumnoId, periodo, cambios){
-  let rec = db.cuotas.find(c=>c.alumnoId===alumnoId && c.periodo===periodo);
-  if(!rec){
-    rec = {id: uid(), alumnoId, periodo, monto: getAlumno(alumnoId).cuota, pagada:false, fechaPago:null};
-    db.cuotas.push(rec);
-  }
-  Object.assign(rec, cambios);
-  return rec;
+    .reduce((s,c)=>s+saldoCuota(c),0);
 }
 function toggleCuotaRapida(alumnoId, periodo, ev){
   if(ev) ev.stopPropagation();
-  const actual = getCuota(alumnoId, periodo);
-  const nuevaPagada = !actual.pagada;
-  setCuota(alumnoId, periodo, {pagada: nuevaPagada, fechaPago: nuevaPagada ? new Date().toISOString().slice(0,10) : null});
+  const c = getCuota(alumnoId, periodo);
+  const estado = estadoCuota(c);
+  if(estado==='pendiente'){
+    agregarPago(alumnoId, periodo, c.monto, new Date().toISOString().slice(0,10));
+  }else if(estado==='pagada'){
+    if(!confirm('¿Marcar esta cuota como pendiente otra vez? Se borrará el registro de pagos.')) return;
+    db.cuotas = db.cuotas.filter(x=>!(x.alumnoId===alumnoId && x.periodo===periodo));
+  }else{
+    openCuotaForm(alumnoId, periodo);
+    return;
+  }
   saveDB();
   renderAll();
+}
+
+/* alquiler del taller (variable mes a mes, se arrastra el ultimo monto cargado) */
+function getAlquiler(periodo){
+  const rec = db.alquileres.find(r=>r.periodo===periodo);
+  if(rec) return rec;
+  const anteriores = db.alquileres.filter(r=>r.periodo<periodo).sort((a,b)=> a.periodo<b.periodo?1:-1);
+  const monto = anteriores.length ? anteriores[0].monto : db.config.alquilerDefault;
+  return {periodo, monto, virtual:true};
+}
+function guardarAlquiler(){
+  const periodo = periodoDeFecha(cuotasFecha);
+  const monto = parseFloat(document.getElementById('f_alquilerMonto').value)||0;
+  let rec = db.alquileres.find(r=>r.periodo===periodo);
+  if(!rec){ rec = {id:uid(), periodo, monto}; db.alquileres.push(rec); }
+  else rec.monto = monto;
+  saveDB();
+  renderCuotas();
+  showToast('Alquiler actualizado');
 }
 
 let cuotasFecha = new Date();
@@ -950,55 +1012,109 @@ function abrirWhatsappCuota(alumnoId, periodo){
   const a = getAlumno(alumnoId);
   const c = getCuota(alumnoId, periodo);
   const mesLabel = periodoLabel(periodo);
+  const saldo = saldoCuota(c);
+  const pagado = montoPagado(c);
+  const fraseMonto = pagado>0
+    ? `te falta abonar ${money(saldo)} (ya pagaste ${money(pagado)} de ${money(c.monto)})`
+    : `es de ${money(c.monto)}`;
   let msg;
   if(a.tipo === 'adulto'){
-    msg = `Hola ${a.nombre}, ¿cómo estás? Te recuerdo que la cuota de ${mesLabel} del taller de canto es de ${money(c.monto)}. ¡Gracias!`;
+    msg = `Hola ${a.nombre}, ¿cómo estás? Te recuerdo que la cuota de ${mesLabel} del taller de canto ${fraseMonto}. ¡Gracias!`;
   }else{
     const contacto = a.contacto ? a.contacto.trim() : '';
     const saludo = contacto ? `Hola ${contacto}, ¿cómo estás?` : 'Hola, ¿cómo estás?';
-    msg = `${saludo}\nTe recuerdo que la cuota de ${mesLabel} de ${a.nombre} en el taller de canto es de ${money(c.monto)}. ¡Gracias!`;
+    msg = `${saludo}\nTe recuerdo que la cuota de ${mesLabel} de ${a.nombre} en el taller de canto ${fraseMonto}. ¡Gracias!`;
   }
   window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function fmtFechaCorta(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 function openCuotaForm(alumnoId, periodo){
   const a = getAlumno(alumnoId);
   const c = getCuota(alumnoId, periodo);
+  const pagado = montoPagado(c);
+  const saldo = saldoCuota(c);
+  const pagosHtml = (c.pagos && c.pagos.length) ? c.pagos.map(p=>`
+    <div class="list-item" style="padding:8px 4px;">
+      <div class="item-main">
+        <div class="item-title" style="font-size:14px;">${money(p.monto)}</div>
+        <div class="item-sub">${fmtFechaCorta(p.fecha)}</div>
+      </div>
+      <button type="button" class="btn danger" style="width:auto;margin:0;padding:6px 10px;font-size:12px;" onclick="eliminarPago('${alumnoId}','${periodo}','${p.id}')">🗑</button>
+    </div>`).join('') : '<div class="empty-msg">Todavía no registraste pagos.</div>';
+
   openSheet(`
     <h3>${escapeHtml(a.nombre)} · ${periodoLabel(periodo)}</h3>
-    <label>Monto de la cuota</label>
-    <input type="number" id="f_c_monto" min="0" step="500" inputmode="numeric" value="${c.monto}">
 
-    <div class="checkbox-line">
-      <input type="checkbox" id="f_c_pagada" ${c.pagada?'checked':''}>
-      <span>Ya la pagó</span>
+    <label>Monto total de la cuota</label>
+    <div class="row2">
+      <input type="number" id="f_c_monto" min="0" step="500" inputmode="numeric" value="${c.monto}">
+      <button type="button" class="btn secondary" style="margin-top:0;" onclick="guardarMontoCuota('${alumnoId}','${periodo}')">Guardar</button>
     </div>
 
-    <label>Fecha de pago (opcional)</label>
-    <input type="date" id="f_c_fecha" value="${c.fechaPago||''}">
+    <div class="stat-row" style="margin-top:14px;">
+      <div class="stat-box ok"><div class="num" style="font-size:18px;">${money(pagado)}</div><div class="label">Pagado</div></div>
+      <div class="stat-box warn"><div class="num" style="font-size:18px;">${money(saldo)}</div><div class="label">Saldo</div></div>
+    </div>
+
+    <label>Pagos registrados</label>
+    <div id="listaPagosCuota">${pagosHtml}</div>
+
+    <div class="row2" style="margin-top:10px;">
+      <div>
+        <label>Monto del pago</label>
+        <input type="number" id="f_c_pagoMonto" min="0" step="500" inputmode="numeric" value="${saldo>0?saldo:''}">
+      </div>
+      <div>
+        <label>Fecha</label>
+        <input type="date" id="f_c_pagoFecha" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+    </div>
+    <button type="button" class="btn primary" style="margin-top:10px;" onclick="agregarPagoForm('${alumnoId}','${periodo}')">+ Agregar pago</button>
 
     <button type="button" class="btn whatsapp" onclick="abrirWhatsappCuota('${alumnoId}','${periodo}')">📲 Enviar recordatorio por WhatsApp</button>
 
-    <div class="btn-row">
-      ${!c.virtual ? `<button class="btn danger" onclick="eliminarRegistroCuota('${alumnoId}','${periodo}')">Restablecer</button>` : ''}
-      <button class="btn primary" onclick="guardarCuotaForm('${alumnoId}','${periodo}')">Guardar</button>
-    </div>
+    ${(!c.virtual && c.pagos.length>0) ? `<button type="button" class="btn danger" onclick="eliminarRegistroCuota('${alumnoId}','${periodo}')">🗑 Borrar todos los pagos</button>` : ''}
   `);
 }
 
-function guardarCuotaForm(alumnoId, periodo){
+function guardarMontoCuota(alumnoId, periodo){
   const monto = parseFloat(document.getElementById('f_c_monto').value)||0;
-  const pagada = document.getElementById('f_c_pagada').checked;
-  const fechaPago = document.getElementById('f_c_fecha').value || (pagada ? new Date().toISOString().slice(0,10) : null);
-  setCuota(alumnoId, periodo, {monto, pagada, fechaPago: pagada?fechaPago:null});
+  const rec = obtenerOCrearCuota(alumnoId, periodo);
+  rec.monto = monto;
   saveDB();
-  closeSheet();
   renderAll();
-  showToast('Cuota guardada');
+  openCuotaForm(alumnoId, periodo);
+  showToast('Monto actualizado');
+}
+
+function agregarPagoForm(alumnoId, periodo){
+  const monto = parseFloat(document.getElementById('f_c_pagoMonto').value);
+  if(!monto || monto<=0){ showToast('Ingresá un monto de pago válido'); return; }
+  const fecha = document.getElementById('f_c_pagoFecha').value || new Date().toISOString().slice(0,10);
+  agregarPago(alumnoId, periodo, monto, fecha);
+  saveDB();
+  renderAll();
+  openCuotaForm(alumnoId, periodo);
+  showToast('Pago registrado');
+}
+
+function eliminarPago(alumnoId, periodo, pagoId){
+  const c = db.cuotas.find(c=>c.alumnoId===alumnoId && c.periodo===periodo);
+  if(!c) return;
+  c.pagos = (c.pagos||[]).filter(p=>p.id!==pagoId);
+  saveDB();
+  renderAll();
+  openCuotaForm(alumnoId, periodo);
 }
 
 function eliminarRegistroCuota(alumnoId, periodo){
-  if(!confirm('¿Restablecer esta cuota a pendiente (monto por defecto)?')) return;
+  if(!confirm('¿Borrar todos los pagos registrados de esta cuota? Vuelve a quedar pendiente.')) return;
   db.cuotas = db.cuotas.filter(c=>!(c.alumnoId===alumnoId && c.periodo===periodo));
   saveDB();
   closeSheet();
@@ -1010,13 +1126,14 @@ function marcarTodasCuotasPagadas(){
   const periodo = periodoDeFecha(cuotasFecha);
   let alumnos = db.alumnos;
   if(filtroTurnoCuotas!=='todos') alumnos = alumnos.filter(a=>a.turnos.includes(filtroTurnoCuotas));
-  const pendientes = alumnos.filter(a=>!getCuota(a.id,periodo).pagada);
-  if(pendientes.length===0){ showToast('No hay cuotas pendientes en este filtro'); return; }
-  if(!confirm(`¿Marcar ${pendientes.length} cuota(s) de ${periodoLabel(periodo)} como pagadas?`)) return;
-  pendientes.forEach(a=> setCuota(a.id, periodo, {pagada:true, fechaPago:new Date().toISOString().slice(0,10)}));
+  const conSaldo = alumnos.filter(a=>saldoCuota(getCuota(a.id,periodo))>0);
+  if(conSaldo.length===0){ showToast('No hay saldos pendientes en este filtro'); return; }
+  if(!confirm(`¿Completar el pago de ${conSaldo.length} alumno(s) de ${periodoLabel(periodo)}?`)) return;
+  const hoy = new Date().toISOString().slice(0,10);
+  conSaldo.forEach(a=> agregarPago(a.id, periodo, saldoCuota(getCuota(a.id,periodo)), hoy));
   saveDB();
   renderAll();
-  showToast('Cuotas marcadas como pagadas');
+  showToast('Cuotas completadas');
 }
 
 function calcularReparto(monto){
@@ -1029,17 +1146,26 @@ function calcularReparto(monto){
   };
 }
 
-function renderRepartoCuotas(cobrado){
+function renderAlquilerCuotas(periodo){
+  const input = document.getElementById('f_alquilerMonto');
+  if(input && document.activeElement!==input) input.value = getAlquiler(periodo).monto;
+}
+
+function renderRepartoCuotas(cobrado, periodo){
   const cont = document.getElementById('cuotasReparto');
   if(!cont) return;
-  const r = calcularReparto(cobrado);
-  cont.innerHTML = `🤝 Reparto de lo cobrado: <b>${escapeHtml(r.nombreA)}</b> ${money(r.montoA)} (${r.pctA}%) · <b>${escapeHtml(r.nombreB)}</b> ${money(r.montoB)} (${r.pctB}%)`;
+  const alquiler = getAlquiler(periodo).monto;
+  const neto = Math.max(0, cobrado - alquiler);
+  const r = calcularReparto(neto);
+  cont.innerHTML = `🏠 Alquiler: <b>${money(alquiler)}</b> · Neto a repartir: <b>${money(neto)}</b><br>
+    🤝 <b>${escapeHtml(r.nombreA)}</b> ${money(r.montoA)} (${r.pctA}%) · <b>${escapeHtml(r.nombreB)}</b> ${money(r.montoB)} (${r.pctB}%)`;
 }
 
 function renderCuotas(){
   renderFiltroTurnoCuotas();
   const periodo = periodoDeFecha(cuotasFecha);
   document.getElementById('cuotasMesLabel').textContent = periodoLabel(periodo);
+  renderAlquilerCuotas(periodo);
 
   let alumnos = db.alumnos;
   if(filtroTurnoCuotas!=='todos') alumnos = alumnos.filter(a=>a.turnos.includes(filtroTurnoCuotas));
@@ -1047,27 +1173,29 @@ function renderCuotas(){
   let cobrado = 0, pendiente = 0;
   const filas = alumnos.map(a=>{
     const c = getCuota(a.id, periodo);
-    if(c.pagada) cobrado += Number(c.monto||0); else pendiente += Number(c.monto||0);
-    return {alumno:a, cuota:c};
+    cobrado += montoPagado(c);
+    pendiente += saldoCuota(c);
+    return {alumno:a, cuota:c, estado: estadoCuota(c)};
   });
 
   document.getElementById('cuotasCobrado').textContent = money(cobrado);
   document.getElementById('cuotasPendiente').textContent = money(pendiente);
-  renderRepartoCuotas(cobrado);
+  renderRepartoCuotas(cobrado, periodo);
 
   const cont = document.getElementById('listaCuotas');
   if(filas.length===0){
     cont.innerHTML = '<div class="empty-msg">No hay alumnos en este filtro.</div>';
     return;
   }
-  cont.innerHTML = filas.map(({alumno,cuota})=>`
+  const ETIQUETAS = {pendiente:'Pendiente', parcial:'Parcial', pagada:'Pagada'};
+  cont.innerHTML = filas.map(({alumno,cuota,estado})=>`
     <div class="list-item" onclick="openCuotaForm('${alumno.id}','${periodo}')" style="cursor:pointer;">
       <div class="dot" style="background:${alumno.color}"></div>
       <div class="item-main">
         <div class="item-title">${escapeHtml(alumno.nombre)}</div>
-        <div class="item-sub">${money(cuota.monto)}</div>
+        <div class="item-sub">${estado==='parcial' ? `${money(montoPagado(cuota))} de ${money(cuota.monto)}` : money(cuota.monto)}</div>
       </div>
-      <button type="button" class="toggle-pill ${cuota.pagada?'pagada':'pendiente'}" onclick="toggleCuotaRapida('${alumno.id}','${periodo}', event)">${cuota.pagada?'Pagada':'Pendiente'}</button>
+      <button type="button" class="toggle-pill ${estado}" onclick="toggleCuotaRapida('${alumno.id}','${periodo}', event)">${ETIQUETAS[estado]}</button>
     </div>
   `).join('');
 }
@@ -1154,12 +1282,14 @@ function abrirDiaCalendario(fechaStr){
     const asis = db.asistencias.find(x=>x.fecha===fechaStr && x.turno===turnoKey && x.alumnoId===a.id);
     const presente = asis ? !!asis.presente : false;
     const cuota = getCuota(a.id, periodo);
+    const estado = estadoCuota(cuota);
+    const etiqueta = estado==='parcial' ? `Parcial (${money(montoPagado(cuota))} de ${money(cuota.monto)})` : (estado==='pagada'?'Pagada':'Pendiente');
     return `
     <div class="list-item">
       <div class="dot" style="background:${a.color}"></div>
       <div class="item-main" onclick="closeSheet(); abrirDetalleAlumno('${a.id}')" style="cursor:pointer;">
         <div class="item-title">${escapeHtml(a.nombre)}</div>
-        <div class="item-sub">Cuota ${periodoLabel(periodo)}: <span class="badge ${cuota.pagada?'pagada':'pendiente'}">${cuota.pagada?'Pagada':'Pendiente'}</span></div>
+        <div class="item-sub">Cuota ${periodoLabel(periodo)}: <span class="badge ${estado}">${etiqueta}</span></div>
       </div>
       <label class="checkbox-line" style="padding:0;" title="Asistió">
         <input type="checkbox" ${presente?'checked':''} onchange="toggleAsistencia('${fechaStr}','${turnoKey}','${a.id}')">
@@ -1286,15 +1416,17 @@ function renderDetalleAlumno(){
     const d = new Date(base.getFullYear(), base.getMonth()-i, 1);
     periodos.push(periodoDeFecha(d));
   }
+  const ETIQUETAS_CUOTA = {pendiente:'Pendiente', parcial:'Parcial', pagada:'Pagada'};
   document.getElementById('detalleCuotas').innerHTML = periodos.map(p=>{
     const c = getCuota(alumno.id, p);
+    const estado = estadoCuota(c);
     return `
     <div class="list-item" onclick="openCuotaForm('${alumno.id}','${p}')" style="cursor:pointer;">
       <div class="item-main">
         <div class="item-title" style="font-size:14px;">${periodoLabel(p)}</div>
-        <div class="item-sub">${money(c.monto)}</div>
+        <div class="item-sub">${estado==='parcial' ? `${money(montoPagado(c))} de ${money(c.monto)}` : money(c.monto)}</div>
       </div>
-      <button type="button" class="toggle-pill ${c.pagada?'pagada':'pendiente'}" onclick="toggleCuotaRapida('${alumno.id}','${p}', event)">${c.pagada?'Pagada':'Pendiente'}</button>
+      <button type="button" class="toggle-pill ${estado}" onclick="toggleCuotaRapida('${alumno.id}','${p}', event)">${ETIQUETAS_CUOTA[estado]}</button>
     </div>`;
   }).join('');
 
@@ -1384,11 +1516,11 @@ function renderDashboard(){
 
   const periodo = periodoActual();
   const deudores = db.alumnos
-    .map(a=>({alumno:a, cuota: getCuota(a.id, periodo)}))
-    .filter(x=>!x.cuota.pagada)
-    .sort((a,b)=>b.cuota.monto-a.cuota.monto);
+    .map(a=>({alumno:a, cuota: getCuota(a.id, periodo), saldo: saldoCuota(getCuota(a.id, periodo))}))
+    .filter(x=>x.saldo>0)
+    .sort((a,b)=>b.saldo-a.saldo);
 
-  const totalPendiente = deudores.reduce((s,x)=>s+Number(x.cuota.monto||0),0);
+  const totalPendiente = deudores.reduce((s,x)=>s+x.saldo,0);
   document.getElementById('statPendienteMonto').textContent = money(totalPendiente);
 
   const pendCont = document.getElementById('dashPendientes');
@@ -1398,7 +1530,7 @@ function renderDashboard(){
       <div class="item-main" onclick="abrirDetalleAlumno('${x.alumno.id}')">
         <div class="item-title">${escapeHtml(x.alumno.nombre)}</div>
       </div>
-      <button type="button" class="toggle-pill pendiente" onclick="toggleCuotaRapida('${x.alumno.id}','${periodo}', event)">${money(x.cuota.monto)}</button>
+      <button type="button" class="toggle-pill ${estadoCuota(x.cuota)}" onclick="toggleCuotaRapida('${x.alumno.id}','${periodo}', event)">${money(x.saldo)}</button>
     </div>
   `).join('') : '<div class="empty-msg">Todos al día con la cuota de este mes 🎉</div>';
 
@@ -1576,6 +1708,7 @@ function importarDatos(){
       if(!confirm('Esto reemplazará TODOS tus datos actuales. ¿Continuar?')) return;
       db.alumnos = Array.isArray(parsed.alumnos) ? parsed.alumnos : [];
       db.cuotas = Array.isArray(parsed.cuotas) ? parsed.cuotas : [];
+      db.alquileres = Array.isArray(parsed.alquileres) ? parsed.alquileres : [];
       db.asistencias = Array.isArray(parsed.asistencias) ? parsed.asistencias : [];
       db.canceladas = Array.isArray(parsed.canceladas) ? parsed.canceladas : [];
       db.notasGenerales = Array.isArray(parsed.notasGenerales) ? parsed.notasGenerales : [];
@@ -1586,6 +1719,13 @@ function importarDatos(){
         if(!Array.isArray(a.turnos)) a.turnos = [];
         if(typeof a.notas !== 'string') a.notas = '';
         if(typeof a.cuota !== 'number') a.cuota = db.config.cuotaDefault;
+      });
+      db.cuotas.forEach(c=>{
+        if(!Array.isArray(c.pagos)){
+          c.pagos = c.pagada ? [{id:uid(), monto:c.monto, fecha:c.fechaPago||new Date().toISOString().slice(0,10)}] : [];
+        }
+        delete c.pagada;
+        delete c.fechaPago;
       });
       saveDB();
       aplicarPaleta();
@@ -1602,7 +1742,7 @@ function importarDatos(){
 function borrarTodo(){
   if(!confirm('Esto borra TODOS los alumnos, cuotas y notas. ¿Estás seguro?')) return;
   if(!confirm('Última confirmación: se perderá todo lo que no hayas exportado. ¿Continuar?')) return;
-  db.alumnos = []; db.cuotas = []; db.asistencias = []; db.canceladas = []; db.notasGenerales = [];
+  db.alumnos = []; db.cuotas = []; db.alquileres = []; db.asistencias = []; db.canceladas = []; db.notasGenerales = [];
   saveDB();
   renderAll();
   showToast('Datos borrados');
@@ -1615,7 +1755,7 @@ const TUTORIAL_PASOS = [
   {icon:'🎤', titulo:'¡Bienvenido/a!', desc:'Organizá el Taller de Canto y Salud Mental: alumnos, turnos fijos y cuotas, todo en un solo lugar. Tus datos se guardan solo en este dispositivo.'},
   {icon:'👤', titulo:'Cargá tus alumnos', desc:'Agregá cada alumno con su cuota mensual, un color identificador y el turno (miércoles y/o viernes) al que asiste.'},
   {icon:'📅', titulo:'Turnos fijos', desc:'El calendario ya tiene armados los turnos de miércoles 11 a 12:30 y viernes 18 a 19:30. Tocá un día para ver quién asiste, marcar asistencia o cancelar la clase (por ejemplo, un feriado).'},
-  {icon:'💲', titulo:'Llevá las cuotas al día', desc:'En Cuotas navegá mes a mes y marcá quién pagó. Podés mandar un recordatorio por WhatsApp con un toque.'},
+  {icon:'💲', titulo:'Llevá las cuotas al día', desc:'En Cuotas navegá mes a mes, registrá pagos parciales si un alumno paga de a partes, cargá el alquiler del mes y mirá cómo se reparte lo neto entre las dos profes. Podés mandar un recordatorio por WhatsApp con un toque.'},
   {icon:'🏠', titulo:'Todo de un vistazo', desc:'En Inicio ves tu próximo turno, quién debe la cuota y lo que tenés para preparar.'},
   {icon:'⚙️', titulo:'Hacela tuya', desc:'En Ajustes podés cambiar los horarios de los turnos, el monto de cuota por defecto, elegir paleta de color y modo oscuro, y exportar tus datos como respaldo.'}
 ];
